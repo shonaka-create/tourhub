@@ -1,5 +1,6 @@
 import { sx } from "@/lib/sx";
 import { Html } from "./Html";
+import { UserMenu } from "./UserMenu";
 
 export function Topbar({
   title,
@@ -47,6 +48,7 @@ export function Topbar({
           )}
         />
       </div>
+      <UserMenu />
     </header>
   );
 }

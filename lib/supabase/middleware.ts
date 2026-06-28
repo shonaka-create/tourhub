@@ -1,7 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Supabase のセッション Cookie を更新する。middleware.ts から呼ぶ。
+// 認証不要でアクセスできるパス
+const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
+
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
+
+// Supabase のセッション Cookie を更新し、未認証アクセスを /login へ誘導する。
+// middleware.ts から呼ぶ。
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -26,8 +36,26 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // セッションを更新（認証を使う場合に必要）
-  await supabase.auth.getUser();
+  // 重要：createServerClient と getUser の間に処理を挟まないこと（Supabase 推奨）
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+
+  // 未認証 かつ 非公開パス → ログインへ
+  if (!user && !isPublicPath(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  // 認証済み かつ ログイン/登録ページ → ダッシュボードへ
+  if (user && (pathname === "/login" || pathname === "/signup")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }
