@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sx } from "@/lib/sx";
 import { C, card, h2, label, btn, pill } from "@/lib/theme";
 import { Html } from "../Html";
+import { SaleEntry, fetchSales, insertSale, deleteSale } from "@/lib/sales";
 
 // 直近7日の売上（当週）と前週同曜日
 const DAYS = ["月", "火", "水", "木", "金", "土", "日"];
@@ -35,20 +36,12 @@ const TOUR_OPTIONS = [
 ];
 const CHANNEL_OPTIONS = ["自社サイト", "提携ホテル", "OTA / 代理店", "ウォークイン", "電話・直接"];
 
-interface SaleEntry {
-  id: string;
-  date: string;
-  tour: string;
-  channel: string;
-  booker: string;
-  pax: number;
-  amount: number;
-  pay: "paid" | "due";
-}
-
 export function SalesModule() {
   const [range, setRange] = useState<(typeof RANGES)[number]>("今週");
   const [entries, setEntries] = useState<SaleEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({
     date: "2026-06-28",
@@ -60,12 +53,31 @@ export function SalesModule() {
     pay: "paid" as "paid" | "due",
   });
 
-  function addEntry() {
+  // 初回ロード: Supabase から保存済みの売上を取得
+  useEffect(() => {
+    let active = true;
+    fetchSales()
+      .then((rows) => {
+        if (active) setEntries(rows);
+      })
+      .catch((e) => {
+        if (active) setErr(e?.message ?? "売上データの読み込みに失敗しました");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function addEntry() {
     const amt = Number(form.amount);
-    if (!amt) return;
-    setEntries((prev) => [
-      {
-        id: "s" + Date.now(),
+    if (!amt || saving) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      const saved = await insertSale({
         date: form.date,
         tour: form.tour,
         channel: form.channel,
@@ -73,15 +85,26 @@ export function SalesModule() {
         pax: Number(form.pax) || 1,
         amount: amt,
         pay: form.pay,
-      },
-      ...prev,
-    ]);
-    setForm({ ...form, booker: "", pax: "1", amount: "", pay: "paid" });
-    setAdding(false);
+      });
+      setEntries((prev) => [saved, ...prev]);
+      setForm({ ...form, booker: "", pax: "1", amount: "", pay: "paid" });
+      setAdding(false);
+    } catch (e: any) {
+      setErr(e?.message ?? "保存に失敗しました");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function removeEntry(id: string) {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+  async function removeEntry(id: string) {
+    const prev = entries;
+    setEntries((cur) => cur.filter((e) => e.id !== id)); // 楽観的に削除
+    try {
+      await deleteSale(id);
+    } catch (e: any) {
+      setEntries(prev); // 失敗時はロールバック
+      setErr(e?.message ?? "削除に失敗しました");
+    }
   }
 
   // 手動登録分の集計
@@ -202,10 +225,25 @@ export function SalesModule() {
               </select>
             </div>
             <div style={sx("display:flex;align-items:flex-end")}>
-              <button onClick={addEntry} style={sx(btn(C.green, "#fff") + "width:100%")}>
-                登録する
+              <button
+                onClick={addEntry}
+                disabled={saving}
+                style={sx(btn(C.green, "#fff") + "width:100%" + (saving ? ";opacity:.6;cursor:wait" : ""))}
+              >
+                {saving ? "保存中…" : "登録する"}
               </button>
             </div>
+          </div>
+        ) : null}
+
+        {err ? (
+          <div
+            style={sx(
+              "margin-top:12px;background:#FDEBEB;border:1px solid #F3D2D2;border-radius:10px;padding:10px 13px;font-size:12px;color:" +
+                C.red
+            )}
+          >
+            {err}（Supabase の sales テーブル / ログイン状態をご確認ください）
           </div>
         ) : null}
 
@@ -276,7 +314,9 @@ export function SalesModule() {
               "margin-top:14px;border:1.5px dashed #C9DCE8;border-radius:12px;padding:18px;text-align:center;font-size:12px;color:#9DB4C4"
             )}
           >
-            まだ登録された売上はありません。「売上を登録」から個別予約・現地販売を追加してください。
+            {loading
+              ? "Supabase から売上データを読み込み中…"
+              : "まだ登録された売上はありません。「売上を登録」から個別予約・現地販売を追加してください。"}
           </div>
         )}
       </section>
