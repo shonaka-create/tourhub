@@ -23,6 +23,10 @@ yarn-error.log*
 .env*.local
 .env
 
+# secrets / scratch (Supabase キーのメモなど)
+/memo
+/_sbtest.mjs
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

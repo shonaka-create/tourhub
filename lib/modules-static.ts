@@ -155,7 +155,7 @@ export function booking(): string {
     'padding:18px 20px">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="' +
     h2 +
-    '">2026年 6月 — 在庫カレンダー</div><div style="display:flex;gap:14px;font-size:11px;color:' +
+    '">2026年 6月 — 空き枠カレンダー</div><div style="display:flex;gap:14px;font-size:11px;color:' +
     C.sub +
     '"><span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:' +
     C.blue +
@@ -184,7 +184,7 @@ export function booking(): string {
     card +
     'padding:18px 20px"><div style="' +
     h2 +
-    'margin-bottom:4px">本日の在庫（空き枠一元管理）</div><div style="' +
+    'margin-bottom:4px">本日の空き枠（一元管理）</div><div style="' +
     label +
     'margin-bottom:8px">定員到達で自動的に受付ブロック</div>' +
     invRows +
@@ -299,148 +299,5 @@ export function asset(): string {
     ';display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8Z" stroke="' +
     C.deep +
     '" stroke-width="2" stroke-linejoin="round"/></svg>「今日使える数」はアサイン管理モジュールへリアルタイム連動。不足時は割当画面で自動警告されます。</div></section>'
-  );
-}
-
-// ============ ROUTE ============
-export function route(): string {
-  const pickups = [
-    { h: "Hilton Surfers Paradise", t: "07:10", pax: 6, tour: "スノーケル", done: true },
-    { h: "Marriott Resort", t: "07:20", pax: 4, tour: "スノーケル", done: true },
-    { h: "Q1 Resort & Spa", t: "07:35", pax: 5, tour: "パラセーリング", done: false },
-    { h: "Mantra on View", t: "07:45", pax: 3, tour: "パラセーリング", done: false },
-    { h: "Peppers Broadbeach", t: "08:00", pax: 6, tour: "ジェットスキー", done: false },
-  ];
-  const rows = pickups
-    .map((p) => {
-      return (
-        '<div style="display:flex;align-items:center;gap:14px;padding:13px 4px;border-bottom:1px solid #F0F5F8">' +
-        '<div style="width:46px;font-family:Outfit;font-weight:700;font-size:13px;color:' +
-        (p.done ? C.sub : C.blue) +
-        '">' +
-        p.t +
-        "</div>" +
-        '<div style="width:30px;height:30px;border-radius:9px;background:' +
-        (p.done ? "#E4F6EC" : "#E3F2FB") +
-        ';display:flex;align-items:center;justify-content:center">' +
-        (p.done
-          ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-11" stroke="' +
-            C.green +
-            '" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-          : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Z" stroke="' +
-            C.blue +
-            '" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="9" r="2.4" stroke="' +
-            C.blue +
-            '" stroke-width="2"/></svg>') +
-        "</div>" +
-        '<div style="flex:1"><div style="font-weight:700;font-size:13px">' +
-        p.h +
-        '</div><div style="font-size:11px;color:' +
-        C.sub +
-        '">' +
-        p.tour +
-        "</div></div>" +
-        '<div style="font-family:Outfit;font-weight:700;font-size:14px">' +
-        p.pax +
-        "名</div>" +
-        (p.done ? pill("乗車済", C.green, "#E4F6EC") : pill("待機", C.blue, "#E3F2FB")) +
-        "</div>"
-      );
-    })
-    .join("");
-
-  const stops = pickups
-    .map((p, i) => {
-      return (
-        '<div style="display:flex;align-items:center;gap:12px">' +
-        '<div style="width:26px;height:26px;border-radius:50%;background:' +
-        (i === 0 ? C.green : C.blue) +
-        ';color:#fff;display:flex;align-items:center;justify-content:center;font-family:Outfit;font-weight:700;font-size:12px;flex-shrink:0">' +
-        (i + 1) +
-        "</div>" +
-        '<div style="flex:1;font-size:12.5px;font-weight:600">' +
-        p.h +
-        '</div><div style="font-size:11px;color:' +
-        C.sub +
-        '">' +
-        p.t +
-        "</div></div>" +
-        (i < pickups.length - 1
-          ? '<div style="margin:2px 0 2px 12px;height:14px;border-left:2px dashed #C9DCE8"></div>'
-          : "")
-      );
-    })
-    .join("");
-
-  const map =
-    '<div style="position:relative;height:300px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#D9EFFA,#EAF6FB)">' +
-    '<div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 38px,rgba(14,143,201,.06) 38px 40px),repeating-linear-gradient(90deg,transparent 0 38px,rgba(14,143,201,.06) 38px 40px)"></div>' +
-    '<div style="position:absolute;left:8%;top:75%;width:84%;height:10px;background:#BFE0F0;border-radius:6px;transform:rotate(-4deg)"></div>' +
-    '<svg style="position:absolute;inset:0" width="100%" height="100%" viewBox="0 0 400 300" preserveAspectRatio="none"><path d="M40 60 C 120 40, 130 150, 210 140 S 320 230, 360 250" fill="none" stroke="' +
-    C.blue +
-    '" stroke-width="3.5" stroke-dasharray="2 8" stroke-linecap="round"/></svg>' +
-    ["40,60", "150,95", "210,140", "290,190", "360,250"]
-      .map((xy, i) => {
-        const p = xy.split(",");
-        return (
-          '<div style="position:absolute;left:' +
-          Number(p[0]) / 4 +
-          "%;top:" +
-          Number(p[1]) / 3 +
-          "%;transform:translate(-50%,-50%);width:24px;height:24px;border-radius:50%;background:" +
-          (i === 0 ? C.green : C.blue) +
-          ';color:#fff;display:flex;align-items:center;justify-content:center;font-family:Outfit;font-weight:700;font-size:11px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.2)">' +
-          (i + 1) +
-          "</div>"
-        );
-      })
-      .join("") +
-    '<div style="position:absolute;right:12px;top:12px;background:#fff;border-radius:10px;padding:8px 12px;font-size:11px;box-shadow:0 4px 12px rgba(0,0,0,.12)"><b style="color:' +
-    C.blue +
-    '">最短巡回ルート</b><br><span style="color:' +
-    C.sub +
-    '">一方通行・停車位置を考慮</span></div>' +
-    "</div>";
-
-  return (
-    '<div style="display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:start">' +
-    '<section style="' +
-    card +
-    'padding:18px 20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="' +
-    h2 +
-    '">本日の送迎リスト（6/28 AM）</div><div style="font-size:12px;color:' +
-    C.sub +
-    '">対象 <b style="color:' +
-    C.ink +
-    '">5ホテル / 24名</b></div></div><div style="' +
-    label +
-    'margin-bottom:6px">ピックアップ対象を日別に自動集計</div>' +
-    rows +
-    "</section>" +
-    '<section style="' +
-    card +
-    'padding:18px 20px">' +
-    map +
-    '<div style="' +
-    h2 +
-    'font-size:14px;margin:16px 0 12px">最適ルート（Google Maps連携）</div>' +
-    stops +
-    '<button style="' +
-    btn(C.blue, "#fff") +
-    'width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7Z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>ドライバーのスマホへ送信</button>' +
-    "</section></div>"
-  );
-}
-
-// ============ SETTINGS ============
-export function settings(): string {
-  return (
-    '<section style="' +
-    card +
-    'padding:30px;text-align:center;color:' +
-    C.sub +
-    '"><div style="' +
-    h2 +
-    'margin-bottom:8px">設定</div>悪天候の基準値（波高・風速）、通知テンプレート、ユーザー権限などをここで管理します。</section>'
   );
 }

@@ -9,6 +9,7 @@ export type NavId =
   | "route"
   | "crm"
   | "manifest"
+  | "sales"
   | "settings";
 
 export interface NavItem {
@@ -56,15 +57,21 @@ export const navItems: NavItem[] = [
   },
   {
     id: "crm",
-    label: "お客様・代理店",
+    label: "代理店管理",
     iconPath:
-      '<circle cx="12" cy="8" r="3.5" stroke="CUR" stroke-width="2"/><path d="M5 20a7 7 0 0 1 14 0" stroke="CUR" stroke-width="2" stroke-linecap="round"/>',
+      '<path d="M3 21V9l9-6 9 6v12" stroke="CUR" stroke-width="2" stroke-linejoin="round"/><path d="M9 21v-6h6v6" stroke="CUR" stroke-width="2" stroke-linejoin="round"/>',
   },
   {
     id: "manifest",
     label: "参加者名簿",
     iconPath:
       '<rect x="6" y="3" width="12" height="18" rx="2.5" stroke="CUR" stroke-width="2"/><path d="M10 18h4" stroke="CUR" stroke-width="2" stroke-linecap="round"/>',
+  },
+  {
+    id: "sales",
+    label: "売上・分析",
+    iconPath:
+      '<path d="M4 19V5m0 14h16M8 16l3-4 3 3 4-6" stroke="CUR" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   },
   {
     id: "settings",
@@ -76,12 +83,13 @@ export const navItems: NavItem[] = [
 
 export const headers: Record<NavId, [string, string]> = {
   dashboard: ["ダッシュボード", "司令塔・例外管理"],
-  booking: ["予約・カレンダー管理", "在庫管理と事前案内の自動化"],
+  booking: ["予約・カレンダー管理", "空き枠管理と事前案内の自動化"],
   assign: ["アサイン・シフト管理", "人・車・機材の割り当て"],
-  asset: ["機材・アセット管理", "在庫と状態の維持"],
-  route: ["送迎・ルート管理", "ピックアップ最適化"],
-  crm: ["お客様・代理店管理", "CRMと請求精算"],
-  manifest: ["参加者名簿・現場管理", "デジタルマニフェスト / QR点呼 / SOP管理"],
+  asset: ["機材・アセット管理", "空き枠と状態の維持"],
+  route: ["送迎・ルート管理", "ピックアップ最適化・現在地追跡"],
+  crm: ["代理店管理", "代理店の登録と請求精算"],
+  manifest: ["参加者名簿・現場管理", "デジタルマニフェスト / 出席確認 / SOP管理"],
+  sales: ["売上・分析", "チャネル別売上と前週比の管理"],
   settings: ["設定", "システム設定"],
 };
 

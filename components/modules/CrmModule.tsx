@@ -5,115 +5,108 @@ import { sx } from "@/lib/sx";
 import { C, card, h2, label, btn, pill } from "@/lib/theme";
 import { Html } from "../Html";
 
-const CUSTOMERS = [
-  { n: "Emma Wilson", c: "🇦🇺", visits: 4, last: "スノーケル (5月)", allergy: "甲殻類アレルギー", spend: "$1,240", note: "リピーター・VIP" },
-  { n: "Liam Chen", c: "🇸🇬", visits: 2, last: "ジェットスキー (4月)", allergy: "なし", spend: "$680", note: "英語ガイド希望" },
-  { n: "Sophie Martin", c: "🇫🇷", visits: 1, last: "パラセーリング (6月)", allergy: "日焼け止めアレルギー", spend: "$210", note: "初回" },
-  { n: "Kenji Sato", c: "🇯🇵", visits: 6, last: "SUP (6月)", allergy: "なし", spend: "$2,050", note: "リピーター・写真撮影希望" },
+interface Agent {
+  id: string;
+  n: string;
+  tag: string;
+  contact: string;
+  bookings: number;
+  gross: number;
+  rate: number; // 手数料率(%)
+}
+
+const INITIAL_AGENTS: Agent[] = [
+  { id: "a1", n: "Experience Oz", tag: "OTA", contact: "partners@experienceoz.com.au", bookings: 24, gross: 4820, rate: 15 },
+  { id: "a2", n: "Hilton Surfers Paradise", tag: "ホテル", contact: "concierge@hilton-sp.com", bookings: 18, gross: 3210, rate: 12 },
+  { id: "a3", n: "Marriott Resort", tag: "ホテル", contact: "tours@marriott-gc.com", bookings: 12, gross: 2480, rate: 12 },
+  { id: "a4", n: "Viator", tag: "OTA", contact: "supply@viator.com", bookings: 9, gross: 1760, rate: 18 },
 ];
 
-const AGENTS = [
-  { n: "Experience Oz", tag: "OTA", bookings: 24, gross: 4820, rate: "15%", fee: 723 },
-  { n: "Hilton Surfers Paradise", tag: "ホテル", bookings: 18, gross: 3210, rate: "12%", fee: 385 },
-  { n: "Marriott Resort", tag: "ホテル", bookings: 12, gross: 2480, rate: "12%", fee: 298 },
-  { n: "Viator", tag: "OTA", bookings: 9, gross: 1760, rate: "18%", fee: 317 },
-];
+const TAGS = ["OTA", "ホテル", "旅行会社", "その他"];
 
 export function CrmModule() {
-  const [tab, setTab] = useState<"customers" | "settle">("customers");
+  const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
   const [invoiced, setInvoiced] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ n: "", tag: "OTA", contact: "", rate: "15" });
 
-  const tabBtn = (id: "customers" | "settle", lbl: string) => {
-    const on = tab === id;
-    return (
-      <div
-        onClick={() => setTab(id)}
-        style={sx(
-          "padding:9px 16px;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;" +
-            (on ? "background:" + C.blue + ";color:#fff" : "background:" + C.soft + ";color:" + C.sub)
-        )}
-      >
-        {lbl}
-      </div>
-    );
-  };
+  const fee = (a: Agent) => Math.round((a.gross * a.rate) / 100);
+  const total = agents.reduce((s, a) => s + fee(a), 0);
 
-  const total = AGENTS.reduce((s, a) => s + a.fee, 0);
+  function addAgent() {
+    if (!form.n.trim()) return;
+    setAgents((prev) => [
+      ...prev,
+      {
+        id: "a" + Date.now(),
+        n: form.n.trim(),
+        tag: form.tag,
+        contact: form.contact.trim(),
+        bookings: 0,
+        gross: 0,
+        rate: Number(form.rate) || 0,
+      },
+    ]);
+    setForm({ n: "", tag: "OTA", contact: "", rate: "15" });
+    setAdding(false);
+    setInvoiced(false);
+  }
+
+  function removeAgent(id: string) {
+    setAgents((prev) => prev.filter((a) => a.id !== id));
+  }
+
+  const inputStyle = sx(
+    "width:100%;box-sizing:border-box;border:1px solid " +
+      C.line +
+      ";border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13px;color:" +
+      C.ink +
+      ";outline:none"
+  );
 
   return (
     <div>
-      <div style={sx("display:flex;gap:9px;margin-bottom:16px")}>
-        {tabBtn("customers", "顧客CRM")}
-        {tabBtn("settle", "代理店精算")}
+      {/* SUMMARY STRIP */}
+      <div style={sx("display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px")}>
+        {[
+          { k: "登録代理店", v: agents.length + "社", c: C.blue },
+          { k: "今月の予約", v: agents.reduce((s, a) => s + a.bookings, 0) + "件", c: C.teal },
+          { k: "送客売上", v: "$" + agents.reduce((s, a) => s + a.gross, 0).toLocaleString(), c: C.green },
+          { k: "回収予定 手数料", v: "$" + total.toLocaleString(), c: C.amber },
+        ].map((s, i) => (
+          <div key={i} style={sx(card + "padding:15px 18px")}>
+            <div style={sx(label)}>{s.k}</div>
+            <div
+              className="font-outfit"
+              style={sx("font-weight:800;font-size:24px;color:" + s.c + ";margin-top:6px")}
+            >
+              {s.v}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {tab === "customers" ? (
-        <div style={sx("display:grid;grid-template-columns:repeat(2,1fr);gap:14px")}>
-          {CUSTOMERS.map((c, i) => (
-            <div key={i} style={sx(card + "padding:16px 18px")}>
-              <div style={sx("display:flex;align-items:center;gap:11px")}>
-                <div
-                  style={sx(
-                    "width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#0E8FC9,#22B3C9);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700"
-                  )}
-                >
-                  {c.n.charAt(0)}
-                </div>
-                <div style={sx("flex:1")}>
-                  <div style={sx("font-weight:700;font-size:14px")}>
-                    {c.n} <span style={sx("font-size:13px")}>{c.c}</span>
-                  </div>
-                  <div style={sx("font-size:11px;color:" + C.sub)}>
-                    参加 {c.visits}回 ・ 累計 {c.spend}
-                  </div>
-                </div>
-                <Html html={pill(c.note, C.deep, "#E3F2FB")} />
-              </div>
-              <div style={sx("display:flex;gap:10px;margin-top:13px")}>
-                <div style={sx("flex:1;background:" + C.soft + ";border-radius:10px;padding:9px 11px")}>
-                  <div style={sx(label)}>最終参加</div>
-                  <div style={sx("font-size:12px;font-weight:600;margin-top:3px")}>{c.last}</div>
-                </div>
-                <div
-                  style={sx(
-                    "flex:1;background:" +
-                      (c.allergy === "なし" ? C.soft : "#FFF6E8") +
-                      ";border-radius:10px;padding:9px 11px"
-                  )}
-                >
-                  <div style={sx(label)}>アレルギー・注意</div>
-                  <div
-                    style={sx(
-                      "font-size:12px;font-weight:600;margin-top:3px;color:" +
-                        (c.allergy === "なし" ? C.ink : C.amber)
-                    )}
-                  >
-                    {c.allergy}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <section style={sx(card + "padding:18px 16px")}>
-          <div
-            style={sx(
-              "display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px"
-            )}
-          >
-            <div>
-              <div style={sx(h2)}>月末 代理店精算（2026年6月）</div>
-              <div style={sx(label + "margin-top:3px")}>予約元タグから手数料を自動集計</div>
-            </div>
+      <section style={sx(card + "padding:18px 16px")}>
+        <div
+          style={sx(
+            "display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px"
+          )}
+        >
+          <div>
+            <div style={sx(h2)}>代理店マスター ＆ 月末精算（2026年6月）</div>
+            <div style={sx(label + "margin-top:3px")}>代理店を登録し、予約数・手数料率から回収額を自動集計</div>
+          </div>
+          <div style={sx("display:flex;gap:9px")}>
+            <button
+              onClick={() => setAdding((v) => !v)}
+              style={sx(btn(C.blue, "#fff") + "display:flex;align-items:center;gap:7px")}
+            >
+              <Html html='<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>' />
+              代理店を登録
+            </button>
             <button
               onClick={() => setInvoiced(true)}
-              style={{
-                ...sx(
-                  btn(invoiced ? C.green : C.green, "#fff") +
-                    "display:flex;align-items:center;gap:8px"
-                ),
-              }}
+              style={sx(btn(C.green, "#fff") + "display:flex;align-items:center;gap:8px")}
             >
               {invoiced ? (
                 "✓ 請求書データを作成しました"
@@ -125,67 +118,140 @@ export function CrmModule() {
               )}
             </button>
           </div>
+        </div>
+
+        {/* ADD FORM */}
+        {adding ? (
           <div
             style={sx(
-              "display:grid;grid-template-columns:1.6fr .8fr .9fr 1fr .9fr 1fr;gap:12px;padding:0 16px 10px;font-size:11px;font-weight:700;color:" +
-                C.sub
+              "background:#F2FAFE;border:1.5px solid #CFE7F4;border-radius:14px;padding:16px;margin:0 4px 16px;display:grid;grid-template-columns:1.4fr .8fr 1.4fr .7fr auto;gap:11px;align-items:end"
             )}
           >
-            <div>代理店 / 予約元タグ</div>
-            <div>区分</div>
-            <div style={sx("text-align:center")}>予約数</div>
-            <div style={sx("text-align:right")}>売上</div>
-            <div style={sx("text-align:center")}>手数料率</div>
-            <div style={sx("text-align:right")}>回収額（バウチャー代）</div>
+            <div>
+              <div style={sx(label + "margin-bottom:5px")}>代理店名 *</div>
+              <input
+                style={inputStyle}
+                value={form.n}
+                onChange={(e) => setForm({ ...form, n: e.target.value })}
+                placeholder="例: Klook"
+              />
+            </div>
+            <div>
+              <div style={sx(label + "margin-bottom:5px")}>区分</div>
+              <select
+                style={inputStyle}
+                value={form.tag}
+                onChange={(e) => setForm({ ...form, tag: e.target.value })}
+              >
+                {TAGS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={sx(label + "margin-bottom:5px")}>連絡先</div>
+              <input
+                style={inputStyle}
+                value={form.contact}
+                onChange={(e) => setForm({ ...form, contact: e.target.value })}
+                placeholder="メール / 電話"
+              />
+            </div>
+            <div>
+              <div style={sx(label + "margin-bottom:5px")}>手数料率 %</div>
+              <input
+                style={inputStyle}
+                type="number"
+                value={form.rate}
+                onChange={(e) => setForm({ ...form, rate: e.target.value })}
+              />
+            </div>
+            <button onClick={addAgent} style={sx(btn(C.green, "#fff") + "white-space:nowrap")}>
+              追加
+            </button>
           </div>
-          {AGENTS.map((a, i) => (
+        ) : null}
+
+        <div
+          style={sx(
+            "display:grid;grid-template-columns:1.5fr .7fr 1.4fr .8fr 1fr .8fr 1fr 30px;gap:12px;padding:0 16px 10px;font-size:11px;font-weight:700;color:" +
+              C.sub
+          )}
+        >
+          <div>代理店 / 予約元タグ</div>
+          <div>区分</div>
+          <div>連絡先</div>
+          <div style={sx("text-align:center")}>予約数</div>
+          <div style={sx("text-align:right")}>売上</div>
+          <div style={sx("text-align:center")}>手数料率</div>
+          <div style={sx("text-align:right")}>回収額</div>
+          <div />
+        </div>
+        {agents.map((a) => (
+          <div
+            key={a.id}
+            style={sx(
+              "display:grid;grid-template-columns:1.5fr .7fr 1.4fr .8fr 1fr .8fr 1fr 30px;gap:12px;align-items:center;" +
+                card +
+                "padding:13px 16px;margin-bottom:9px"
+            )}
+          >
+            <div style={sx("font-weight:700;font-size:13px")}>{a.n}</div>
+            <div>
+              <Html html={pill(a.tag, C.deep, "#E3F2FB")} />
+            </div>
+            <div style={sx("font-size:11px;color:" + C.sub + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap")}>
+              {a.contact || "—"}
+            </div>
+            <div className="font-outfit" style={sx("text-align:center;font-weight:700")}>
+              {a.bookings}
+            </div>
+            <div className="font-outfit" style={sx("text-align:right;font-weight:600;color:" + C.sub)}>
+              ${a.gross.toLocaleString()}
+            </div>
+            <div style={sx("text-align:center;font-weight:700;color:" + C.amber)}>{a.rate}%</div>
             <div
-              key={i}
+              className="font-outfit"
+              style={sx("text-align:right;font-weight:800;font-size:15px;color:" + C.green)}
+            >
+              ${fee(a).toLocaleString()}
+            </div>
+            <div
+              onClick={() => removeAgent(a.id)}
+              title="削除"
               style={sx(
-                "display:grid;grid-template-columns:1.6fr .8fr .9fr 1fr .9fr 1fr;gap:12px;align-items:center;" +
-                  card +
-                  "padding:13px 16px;margin-bottom:9px"
+                "cursor:pointer;display:flex;align-items:center;justify-content:center;color:#C0CDD8"
               )}
             >
-              <div style={sx("font-weight:700;font-size:13px")}>{a.n}</div>
-              <div>
-                <Html html={pill(a.tag, C.deep, "#E3F2FB")} />
-              </div>
-              <div className="font-outfit" style={sx("text-align:center;font-weight:700")}>
-                {a.bookings}
-              </div>
-              <div
-                className="font-outfit"
-                style={sx("text-align:right;font-weight:600;color:" + C.sub)}
-              >
-                ${a.gross.toLocaleString()}
-              </div>
-              <div style={sx("text-align:center;font-weight:700;color:" + C.amber)}>{a.rate}</div>
-              <div
-                className="font-outfit"
-                style={sx("text-align:right;font-weight:800;font-size:15px;color:" + C.green)}
-              >
-                ${a.fee.toLocaleString()}
-              </div>
+              <Html html='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 7h12M9 7V5h6v2M7 7l1 13h8l1-13" stroke="#9DB4C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' />
             </div>
-          ))}
-          <div
-            style={sx(
-              "display:flex;justify-content:flex-end;align-items:center;gap:14px;margin-top:6px;padding:12px 16px;background:#F2FAFE;border-radius:12px"
-            )}
-          >
-            <span style={sx("font-size:13px;font-weight:700;color:" + C.deep)}>
-              6月 回収予定 合計
-            </span>
-            <span
-              className="font-outfit"
-              style={sx("font-weight:800;font-size:22px;color:" + C.green)}
-            >
-              ${total.toLocaleString()}
-            </span>
           </div>
-        </section>
-      )}
+        ))}
+        <div
+          style={sx(
+            "display:flex;justify-content:flex-end;align-items:center;gap:14px;margin-top:6px;padding:12px 16px;background:#F2FAFE;border-radius:12px"
+          )}
+        >
+          <span style={sx("font-size:13px;font-weight:700;color:" + C.deep)}>6月 回収予定 合計</span>
+          <span className="font-outfit" style={sx("font-weight:800;font-size:22px;color:" + C.green)}>
+            ${total.toLocaleString()}
+          </span>
+        </div>
+
+        <div
+          style={sx(
+            "margin-top:14px;background:#FFF8F1;border:1px dashed #F3D9BC;border-radius:12px;padding:11px 14px;font-size:12px;color:#9A5B2E;display:flex;align-items:center;gap:8px"
+          )}
+        >
+          <Html html='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#B4480E" stroke-width="2"/><path d="M12 8v5M12 16h.01" stroke="#B4480E" stroke-width="2" stroke-linecap="round"/></svg>' />
+          <span>
+            将来的に <b>OTA（Experience Oz / Viator など）の予約データを自動連携</b>{" "}
+            し、予約数・売上をリアルタイム取込予定です。
+          </span>
+        </div>
+      </section>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { sx } from "@/lib/sx";
 import { NavId, headers } from "@/lib/data";
-import { booking, asset, route, settings } from "@/lib/modules-static";
+import { booking, asset } from "@/lib/modules-static";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { Dashboard } from "@/components/Dashboard";
@@ -12,6 +12,9 @@ import { StaticModule } from "@/components/StaticModule";
 import { AssignModule } from "@/components/modules/AssignModule";
 import { CrmModule } from "@/components/modules/CrmModule";
 import { ManifestModule } from "@/components/modules/ManifestModule";
+import { RouteModule } from "@/components/modules/RouteModule";
+import { SettingsModule } from "@/components/modules/SettingsModule";
+import { SalesModule } from "@/components/modules/SalesModule";
 
 export default function Page() {
   const [active, setActive] = useState<NavId>("dashboard");
@@ -47,13 +50,15 @@ export default function Page() {
       case "asset":
         return <StaticModule html={asset()} />;
       case "route":
-        return <StaticModule html={route()} />;
+        return <RouteModule />;
       case "crm":
         return <CrmModule />;
       case "manifest":
         return <ManifestModule />;
+      case "sales":
+        return <SalesModule />;
       case "settings":
-        return <StaticModule html={settings()} />;
+        return <SettingsModule />;
     }
   }
 
