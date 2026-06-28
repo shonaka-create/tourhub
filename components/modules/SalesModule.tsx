@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { sx } from "@/lib/sx";
-import { C, card, h2, label, pill } from "@/lib/theme";
+import { C, card, h2, label, btn, pill } from "@/lib/theme";
 import { Html } from "../Html";
 
 // 直近7日の売上（当週）と前週同曜日
@@ -26,23 +26,89 @@ const CHANNELS: ChannelRow[] = [
 
 const RANGES = ["本日", "今週", "今月"] as const;
 
+const TOUR_OPTIONS = [
+  "モーニング・スノーケル",
+  "パラセーリング",
+  "ジェットスキー体験",
+  "シティ・バイクツアー",
+  "サンライズ・SUP",
+];
+const CHANNEL_OPTIONS = ["自社サイト", "提携ホテル", "OTA / 代理店", "ウォークイン", "電話・直接"];
+
+interface SaleEntry {
+  id: string;
+  date: string;
+  tour: string;
+  channel: string;
+  booker: string;
+  pax: number;
+  amount: number;
+  pay: "paid" | "due";
+}
+
 export function SalesModule() {
   const [range, setRange] = useState<(typeof RANGES)[number]>("今週");
+  const [entries, setEntries] = useState<SaleEntry[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({
+    date: "2026-06-28",
+    tour: TOUR_OPTIONS[0],
+    channel: CHANNEL_OPTIONS[0],
+    booker: "",
+    pax: "1",
+    amount: "",
+    pay: "paid" as "paid" | "due",
+  });
 
-  const thisTotal = THIS_WEEK.reduce((a, b) => a + b, 0);
+  function addEntry() {
+    const amt = Number(form.amount);
+    if (!amt) return;
+    setEntries((prev) => [
+      {
+        id: "s" + Date.now(),
+        date: form.date,
+        tour: form.tour,
+        channel: form.channel,
+        booker: form.booker.trim() || "（名称未入力）",
+        pax: Number(form.pax) || 1,
+        amount: amt,
+        pay: form.pay,
+      },
+      ...prev,
+    ]);
+    setForm({ ...form, booker: "", pax: "1", amount: "", pay: "paid" });
+    setAdding(false);
+  }
+
+  function removeEntry(id: string) {
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  // 手動登録分の集計
+  const regTotal = entries.reduce((a, e) => a + e.amount, 0);
+  const regDueTotal = entries.filter((e) => e.pay === "due").reduce((a, e) => a + e.amount, 0);
+  const regDueCount = entries.filter((e) => e.pay === "due").length;
+
+  const thisTotal = THIS_WEEK.reduce((a, b) => a + b, 0) + regTotal;
   const lastTotal = LAST_WEEK.reduce((a, b) => a + b, 0);
   const wow = Math.round(((thisTotal - lastTotal) / lastTotal) * 100);
 
-  const today = THIS_WEEK[THIS_WEEK.length - 1];
+  const today = THIS_WEEK[THIS_WEEK.length - 1] + regTotal;
   const todayPrev = LAST_WEEK[LAST_WEEK.length - 1];
   const todayWow = Math.round(((today - todayPrev) / todayPrev) * 100);
 
   const chTotal = CHANNELS.reduce((a, c) => a + c.amount, 0);
-  const max = Math.max(...THIS_WEEK, ...LAST_WEEK);
+  // 当週グラフ: 本日（日）に手動登録分を加算して反映
+  const thisWeekChart = THIS_WEEK.map((v, i) => (i === THIS_WEEK.length - 1 ? v + regTotal : v));
+  const max = Math.max(...thisWeekChart, ...LAST_WEEK);
 
   const headline =
     range === "本日" ? today : range === "今週" ? thisTotal : Math.round(thisTotal * 4.3);
   const headlineWow = range === "本日" ? todayWow : wow;
+
+  const baseBookings = CHANNELS.reduce((a, c) => a + c.count, 0);
+  const baseDue = 640;
+  const baseDueCount = 3;
 
   const kpis = [
     {
@@ -51,13 +117,170 @@ export function SalesModule() {
       d: (headlineWow >= 0 ? "▲ " : "▼ ") + Math.abs(headlineWow) + "% 前週比",
       c: headlineWow >= 0 ? C.green : C.red,
     },
-    { k: "客単価", v: "$" + Math.round(today / 24), d: "本日 24組", c: C.sub },
-    { k: "予約件数", v: CHANNELS.reduce((a, c) => a + c.count, 0) + "件", d: "確定ベース", c: C.sub },
-    { k: "未収金", v: "$640", d: "3件 要回収", c: C.amber },
+    { k: "客単価", v: "$" + Math.round(today / (24 + entries.length || 1)), d: "本日 " + (24 + entries.length) + "組", c: C.sub },
+    { k: "予約件数", v: baseBookings + entries.length + "件", d: entries.length ? "うち手動登録 " + entries.length + "件" : "確定ベース", c: C.sub },
+    { k: "未収金", v: "$" + (baseDue + regDueTotal).toLocaleString(), d: baseDueCount + regDueCount + "件 要回収", c: C.amber },
   ];
+
+  const inputStyle = sx(
+    "box-sizing:border-box;width:100%;border:1px solid " +
+      C.line +
+      ";border-radius:10px;padding:9px 11px;font-family:inherit;font-size:13px;color:" +
+      C.ink +
+      ";outline:none"
+  );
 
   return (
     <div style={sx("display:flex;flex-direction:column;gap:18px")}>
+      {/* SALES REGISTRATION */}
+      <section style={sx(card + "padding:18px 20px")}>
+        <div style={sx("display:flex;align-items:center;justify-content:space-between")}>
+          <div>
+            <div style={sx(h2)}>売上登録（個別予約・現地販売）</div>
+            <div style={sx(label + "margin-top:3px")}>
+              OTA以外の電話・直接・ウォークイン予約をその場で登録。下のKPI・グラフに即反映されます
+            </div>
+          </div>
+          <button
+            onClick={() => setAdding((v) => !v)}
+            style={sx(btn(adding ? C.soft : C.blue, adding ? C.sub : "#fff") + "display:flex;align-items:center;gap:7px")}
+          >
+            {adding ? (
+              "閉じる"
+            ) : (
+              <>
+                <Html html='<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>' />
+                売上を登録
+              </>
+            )}
+          </button>
+        </div>
+
+        {adding ? (
+          <div
+            style={sx(
+              "background:#F2FAFE;border:1.5px solid #CFE7F4;border-radius:14px;padding:16px;margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px"
+            )}
+          >
+            <div>
+              <div style={sx(label + "margin-bottom:5px")}>日付</div>
+              <input style={inputStyle} type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+            </div>
+            <div>
+              <div style={sx(label + "margin-bottom:5px")}>ツアー</div>
+              <select style={inputStyle} value={form.tour} onChange={(e) => setForm({ ...form, tour: e.target.value })}>
+                {TOUR_OPTIONS.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={sx(label + "margin-bottom:5px")}>チャネル</div>
+              <select style={inputStyle} value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}>
+                {CHANNEL_OPTIONS.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={sx(label + "margin-bottom:5px")}>予約者名</div>
+              <input style={inputStyle} value={form.booker} onChange={(e) => setForm({ ...form, booker: e.target.value })} placeholder="例: 田中 様" />
+            </div>
+            <div>
+              <div style={sx(label + "margin-bottom:5px")}>人数</div>
+              <input style={inputStyle} type="number" min={1} value={form.pax} onChange={(e) => setForm({ ...form, pax: e.target.value })} />
+            </div>
+            <div>
+              <div style={sx(label + "margin-bottom:5px")}>金額（$）*</div>
+              <input style={inputStyle} type="number" min={0} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0" />
+            </div>
+            <div>
+              <div style={sx(label + "margin-bottom:5px")}>決済状況</div>
+              <select style={inputStyle} value={form.pay} onChange={(e) => setForm({ ...form, pay: e.target.value as "paid" | "due" })}>
+                <option value="paid">入金済</option>
+                <option value="due">未収</option>
+              </select>
+            </div>
+            <div style={sx("display:flex;align-items:flex-end")}>
+              <button onClick={addEntry} style={sx(btn(C.green, "#fff") + "width:100%")}>
+                登録する
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {entries.length ? (
+          <div style={sx("margin-top:16px")}>
+            <div
+              style={sx(
+                "display:grid;grid-template-columns:1fr 1.4fr 1.2fr 1.4fr .7fr 1fr .9fr 30px;gap:10px;padding:0 12px 9px;font-size:11px;font-weight:700;color:" +
+                  C.sub
+              )}
+            >
+              <div>日付</div>
+              <div>ツアー</div>
+              <div>チャネル</div>
+              <div>予約者名</div>
+              <div style={sx("text-align:center")}>人数</div>
+              <div style={sx("text-align:right")}>金額</div>
+              <div style={sx("text-align:center")}>決済</div>
+              <div />
+            </div>
+            {entries.map((e) => (
+              <div
+                key={e.id}
+                style={sx(
+                  "display:grid;grid-template-columns:1fr 1.4fr 1.2fr 1.4fr .7fr 1fr .9fr 30px;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid #F0F5F8"
+                )}
+              >
+                <div style={sx("font-size:12px;color:" + C.sub)}>{e.date.slice(5)}</div>
+                <div style={sx("font-size:13px;font-weight:700")}>{e.tour}</div>
+                <div style={sx("font-size:12px")}>{e.channel}</div>
+                <div style={sx("font-size:12px")}>{e.booker}</div>
+                <div className="font-outfit" style={sx("text-align:center;font-weight:700")}>{e.pax}</div>
+                <div className="font-outfit" style={sx("text-align:right;font-weight:800;font-size:14px")}>
+                  ${e.amount.toLocaleString()}
+                </div>
+                <div style={sx("text-align:center")}>
+                  <Html
+                    html={
+                      e.pay === "due"
+                        ? pill("未収", C.red, "#FDEBEB")
+                        : pill("入金済", C.green, "#E4F6EC")
+                    }
+                  />
+                </div>
+                <div
+                  onClick={() => removeEntry(e.id)}
+                  title="削除"
+                  style={sx("cursor:pointer;display:flex;align-items:center;justify-content:center")}
+                >
+                  <Html html='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 7h12M9 7V5h6v2M7 7l1 13h8l1-13" stroke="#9DB4C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' />
+                </div>
+              </div>
+            ))}
+            <div
+              style={sx(
+                "display:flex;justify-content:flex-end;align-items:center;gap:14px;margin-top:8px;padding:11px 14px;background:#F2FAFE;border-radius:12px"
+              )}
+            >
+              <span style={sx("font-size:13px;font-weight:700;color:" + C.deep)}>登録済み売上 合計（{entries.length}件）</span>
+              <span className="font-outfit" style={sx("font-weight:800;font-size:20px;color:" + C.green)}>
+                ${regTotal.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div
+            style={sx(
+              "margin-top:14px;border:1.5px dashed #C9DCE8;border-radius:12px;padding:18px;text-align:center;font-size:12px;color:#9DB4C4"
+            )}
+          >
+            まだ登録された売上はありません。「売上を登録」から個別予約・現地販売を追加してください。
+          </div>
+        )}
+      </section>
+
       {/* RANGE SWITCHER */}
       <div style={sx("display:flex;gap:9px")}>
         {RANGES.map((r) => {
@@ -108,9 +331,9 @@ export function SalesModule() {
           </div>
           <div style={sx("display:flex;align-items:flex-end;gap:14px;height:200px")}>
             {DAYS.map((d, i) => {
-              const th = (THIS_WEEK[i] / max) * 100;
+              const th = (thisWeekChart[i] / max) * 100;
               const lh = (LAST_WEEK[i] / max) * 100;
-              const up = THIS_WEEK[i] >= LAST_WEEK[i];
+              const up = thisWeekChart[i] >= LAST_WEEK[i];
               return (
                 <div key={d} style={sx("flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%")}>
                   <div style={sx("flex:1;display:flex;align-items:flex-end;gap:4px;width:100%;justify-content:center")}>
@@ -122,7 +345,7 @@ export function SalesModule() {
                       }}
                     />
                     <div
-                      title={"当週 $" + THIS_WEEK[i]}
+                      title={"当週 $" + thisWeekChart[i]}
                       style={{
                         ...sx("width:13px;border-radius:5px 5px 0 0;background:" + (up ? C.blue : C.amber)),
                         height: th + "%",
