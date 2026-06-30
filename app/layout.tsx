@@ -1,10 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Tourhub — Gold Coast Ops",
   description:
     "ゴールドコーストのツアー会社向け業務管理システム — 司令塔ダッシュボード",
+};
+
+// モバイルで端末幅に合わせて描画（無いと約980px幅で描画され横スクロールが発生する）
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

@@ -71,6 +71,11 @@ body {
   display: none;
 }
 
+/* Mobile-only logout icon in the topbar: hidden on desktop. */
+.user-logout-icon {
+  display: none;
+}
+
 /* Drawer overlay: hidden until opened on small screens. */
 .app-overlay {
   display: none;
@@ -165,9 +170,15 @@ body {
     grid-template-columns: 1fr !important;
   }
 
-  /* Phone header: drop the page title/subtitle (kept the hamburger + user). */
-  .topbar-title {
+  /* Phone header (per mockup): hamburger + page title + bell + logout icon. */
+  .topbar-title > div:nth-child(2) {
+    display: none !important; /* サブタイトルのみ隠してタイトルは表示 */
+  }
+  .user-full {
     display: none !important;
+  }
+  .user-logout-icon {
+    display: flex !important;
   }
 
   /* Storm alert banner: stack vertically instead of crushing into a column. */
