@@ -155,12 +155,13 @@ export function Dashboard({
             )}
           >
             <div
+              className="tl-head"
               style={sx(
                 "display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"
               )}
             >
               <div style={sx("font-weight:800;font-size:15px")}>本日のタイムライン</div>
-              <div style={sx("display:flex;gap:14px;font-size:11px;color:#6E8BA0")}>
+              <div style={sx("display:flex;gap:14px;font-size:11px;color:#6E8BA0;flex-shrink:0")}>
                 <span style={sx("display:flex;align-items:center;gap:5px")}>
                   <span style={sx("width:9px;height:9px;border-radius:3px;background:#16A34A")} />
                   進行中
@@ -177,9 +178,9 @@ export function Dashboard({
             </div>
             <div style={sx("display:flex;flex-direction:column;gap:10px")}>
               {timeline.map((t, i) => (
-                <div key={i} style={sx("display:flex;align-items:center;gap:14px")}>
+                <div key={i} className="tl-row" style={sx("display:flex;align-items:center;gap:14px")}>
                   <div
-                    className="font-outfit"
+                    className="font-outfit tl-time"
                     style={sx("width:46px;text-align:right;font-weight:700;font-size:13px;color:#0E2A3D")}
                   >
                     {t.time}
@@ -193,8 +194,9 @@ export function Dashboard({
                     )}
                   />
                   <div
+                    className="tl-card"
                     style={sx(
-                      "flex:1;background:" +
+                      "flex:1;min-width:0;background:" +
                         t.bg +
                         ";border:1px solid " +
                         t.border +
@@ -204,13 +206,13 @@ export function Dashboard({
                     <div style={sx("flex:1;min-width:0")}>
                       <div
                         style={sx(
-                          "font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px"
+                          "font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"
                         )}
                       >
                         {t.title}
                         <span
                           style={sx(
-                            "font-size:10px;font-weight:700;color:" +
+                            "font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;color:" +
                               t.chipColor +
                               ";background:" +
                               t.chipBg +

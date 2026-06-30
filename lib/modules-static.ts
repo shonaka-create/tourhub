@@ -91,7 +91,7 @@ export function asset(): string {
     "</div>" +
     '<section style="' +
     card +
-    'padding:18px 16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px"><div style="' +
+    'padding:18px 16px"><div class="r-wrap" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px;gap:10px"><div style="' +
     h2 +
     '">機材マスター ＆ ステータス管理</div><button style="' +
     btn(C.blue, "#fff") +

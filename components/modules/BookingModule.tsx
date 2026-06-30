@@ -187,9 +187,9 @@ export function BookingModule() {
       <div className="r-split" style={sx("display:grid;grid-template-columns:1.1fr .9fr;gap:18px;align-items:start")}>
         {/* CALENDAR */}
         <section style={sx(card + "padding:18px 20px")}>
-          <div style={sx("display:flex;align-items:center;justify-content:space-between;margin-bottom:14px")}>
+          <div className="cal-head" style={sx("display:flex;align-items:center;justify-content:space-between;margin-bottom:14px")}>
             <div style={sx(h2)}>{YEAR}年 {MONTH + 1}月 — 空き枠カレンダー</div>
-            <div style={sx("display:flex;gap:14px;font-size:11px;color:" + C.sub)}>
+            <div style={sx("display:flex;gap:14px;font-size:11px;flex-shrink:0;color:" + C.sub)}>
               {[
                 ["空きあり", C.blue],
                 ["残少", C.amber],
@@ -206,14 +206,14 @@ export function BookingModule() {
             上限枠と予約数の登録内容から、各日の空き状況を自動表示します
           </div>
 
-          <div style={sx("display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:7px")}>
+          <div className="cal-grid" style={sx("display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:7px")}>
             {DAY_LABELS.map((d) => (
               <div key={d} style={sx("text-align:center;font-size:11px;font-weight:700;color:" + C.sub)}>
                 {d}
               </div>
             ))}
           </div>
-          <div style={sx("display:grid;grid-template-columns:repeat(7,1fr);gap:7px")}>
+          <div className="cal-grid" style={sx("display:grid;grid-template-columns:repeat(7,1fr);gap:7px")}>
             {Array.from({ length: leadBlanks }).map((_, i) => (
               <div key={"b" + i} />
             ))}
@@ -229,6 +229,7 @@ export function BookingModule() {
               return (
                 <div
                   key={d}
+                  className="cal-cell"
                   onClick={() => setSelDate(date)}
                   style={sx(
                     card +
@@ -268,7 +269,7 @@ export function BookingModule() {
                       ) : null}
                     </>
                   ) : (
-                    <div style={sx("font-size:10px;color:#B7C7D3;margin-top:10px")}>枠未設定</div>
+                    <div className="cal-empty" style={sx("font-size:10px;color:#B7C7D3;margin-top:10px")}>枠未設定</div>
                   )}
                 </div>
               );
@@ -345,7 +346,7 @@ export function BookingModule() {
 
       {/* REGISTRATION / ADMIN INFO */}
       <section style={sx(card + "padding:18px 20px")}>
-        <div style={sx("display:flex;align-items:center;justify-content:space-between")}>
+        <div className="r-head" style={sx("display:flex;align-items:center;justify-content:space-between")}>
           <div>
             <div style={sx(h2)}>ツアー枠・管理者情報の登録</div>
             <div style={sx(label + "margin-top:3px")}>

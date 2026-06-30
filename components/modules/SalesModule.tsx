@@ -157,7 +157,7 @@ export function SalesModule() {
     <div style={sx("display:flex;flex-direction:column;gap:18px")}>
       {/* SALES REGISTRATION */}
       <section style={sx(card + "padding:18px 20px")}>
-        <div style={sx("display:flex;align-items:center;justify-content:space-between")}>
+        <div className="r-head" style={sx("display:flex;align-items:center;justify-content:space-between")}>
           <div>
             <div style={sx(h2)}>売上登録（個別予約・現地販売）</div>
             <div style={sx(label + "margin-top:3px")}>
@@ -356,7 +356,7 @@ export function SalesModule() {
         ))}
       </div>
 
-      <div style={sx("display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start")}>
+      <div className="r-split" style={sx("display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start")}>
         {/* WoW BAR CHART */}
         <section style={sx(card + "padding:18px 22px")}>
           <div style={sx("display:flex;align-items:center;justify-content:space-between;margin-bottom:4px")}>

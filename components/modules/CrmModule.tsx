@@ -88,6 +88,7 @@ export function CrmModule() {
 
       <section style={sx(card + "padding:18px 16px")}>
         <div
+          className="r-head"
           style={sx(
             "display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px"
           )}

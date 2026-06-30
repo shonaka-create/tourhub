@@ -307,7 +307,7 @@ export function ManifestModule() {
           </div>
 
           <section style={sx(card + "padding:18px 16px")}>
-            <div style={sx("display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px")}>
+            <div className="r-head" style={sx("display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px")}>
               <div>
                 <div style={sx(h2)}>
                   デジタル参加者名簿 — {tour.time} {tour.name}
@@ -335,6 +335,7 @@ export function ManifestModule() {
                   >
                     {/* BOOKING HEADER */}
                     <div
+                      className="r-wrap"
                       style={sx(
                         "display:flex;align-items:center;gap:12px;padding:11px 14px;background:" + C.soft
                       )}

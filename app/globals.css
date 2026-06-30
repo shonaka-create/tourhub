@@ -151,6 +151,10 @@ body {
   .r-split {
     grid-template-columns: 1fr !important;
   }
+  /* Dashboard timeline card: let the seats block wrap below the title block. */
+  .tl-card {
+    flex-wrap: wrap !important;
+  }
 }
 
 @media (max-width: 600px) {
@@ -175,6 +179,41 @@ body {
   .storm-banner > button {
     width: 100% !important;
     justify-content: center !important;
+  }
+
+  /* Section headers with title + action buttons: wrap the buttons below. */
+  .r-head {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+
+  /* Dashboard timeline */
+  .tl-head {
+    flex-wrap: wrap !important;
+    gap: 6px 12px !important;
+  }
+  .tl-row {
+    gap: 8px !important;
+  }
+  .tl-time {
+    width: 36px !important;
+  }
+
+  /* Booking calendar: keep the 7-col grid but prevent overflow and declutter. */
+  .cal-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+  }
+  .cal-cell {
+    padding: 6px 4px !important;
+    min-height: 54px !important;
+  }
+  .cal-empty {
+    display: none !important;
+  }
+  .cal-head {
+    flex-wrap: wrap !important;
+    gap: 6px 12px !important;
   }
 
   /* Floating chat fills most of the screen on phones. */

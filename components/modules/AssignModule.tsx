@@ -69,19 +69,23 @@ export function AssignModule() {
   const [addCat, setAddCat] = useState<Cat | null>(null);
   const [addForm, setAddForm] = useState({ name: "", sub: "" });
 
+  // ドラッグ＆ドロップ・ドロップダウン選択 共通の割当処理
+  function assign(tid: string, cat: Cat, id: string) {
+    const res = pools[cat].find((r) => r.id === id);
+    if (!res) return;
+    setTours((prev) =>
+      prev.map((t) =>
+        t.id === tid && !t.assigned.some((a) => a.id === res.id && a.cat === cat)
+          ? { ...t, assigned: [...t.assigned, { id: res.id, name: res.name, cat }] }
+          : t
+      )
+    );
+  }
+
   function drop(tid: string) {
     setHover(null);
     if (!drag) return;
-    const res = pools[drag.cat].find((r) => r.id === drag.id);
-    if (res) {
-      setTours((prev) =>
-        prev.map((t) =>
-          t.id === tid && !t.assigned.some((a) => a.id === res.id && a.cat === drag.cat)
-            ? { ...t, assigned: [...t.assigned, { id: res.id, name: res.name, cat: drag.cat }] }
-            : t
-        )
-      );
-    }
+    assign(tid, drag.cat, drag.id);
     setDrag(null);
   }
 
@@ -208,7 +212,7 @@ export function AssignModule() {
     <div className="r-split" style={sx("display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start")}>
       {/* POOL */}
       <section style={sx(card + "padding:16px 16px 18px;display:flex;flex-direction:column;gap:18px")}>
-        <div style={sx(label)}>ツアーへドラッグして割当 ・ ＋でカテゴリに項目を追加</div>
+        <div style={sx(label)}>ツアーへドラッグ、または各ツアーのメニューから選択して割当 ・ ＋で項目を追加</div>
         {poolSection("guide")}
         {poolSection("van")}
         {poolSection("equip")}
@@ -260,7 +264,7 @@ export function AssignModule() {
                   }
                 />
               </div>
-              <div style={sx("display:flex;gap:18px;font-size:11px;color:" + C.sub + ";margin-bottom:12px")}>
+              <div className="r-wrap" style={sx("display:flex;gap:18px;font-size:11px;color:" + C.sub + ";margin-bottom:12px")}>
                 <span>
                   予約 <b style={sx("color:" + C.ink)}>{t.pax}名</b>
                 </span>
@@ -280,7 +284,7 @@ export function AssignModule() {
               >
                 {t.assigned.length === 0 ? (
                   <span style={sx("font-size:12px;color:#9DB4C4")}>
-                    ここに人・車・機材をドロップ
+                    ドラッグ＆ドロップ、または下のメニューから選択して割当
                   </span>
                 ) : (
                   t.assigned.map((a) => {
@@ -303,6 +307,43 @@ export function AssignModule() {
                   })
                 )}
               </div>
+
+              {/* ドロップダウン選択（モバイル・タッチ環境向けの割当手段） */}
+              <select
+                value=""
+                onChange={(e) => {
+                  if (!e.target.value) return;
+                  const [cat, id] = e.target.value.split("|") as [Cat, string];
+                  assign(t.id, cat, id);
+                  e.target.value = "";
+                }}
+                style={sx(
+                  "margin-top:9px;width:100%;box-sizing:border-box;border:1px solid " +
+                    C.line +
+                    ";border-radius:10px;padding:9px 11px;font-family:inherit;font-size:13px;color:" +
+                    C.ink +
+                    ";background:#fff;cursor:pointer;outline:none"
+                )}
+              >
+                <option value="">＋ 人・車・機材を選択して割当…</option>
+                {(["guide", "van", "equip"] as Cat[]).map((cat) => {
+                  const avail = pools[cat].filter(
+                    (r) => !t.assigned.some((a) => a.id === r.id && a.cat === cat)
+                  );
+                  if (avail.length === 0) return null;
+                  return (
+                    <optgroup key={cat} label={CAT_META[cat].title}>
+                      {avail.map((r) => (
+                        <option key={r.id} value={cat + "|" + r.id}>
+                          {r.name}
+                          {r.sub ? "（" + r.sub + "）" : ""}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </select>
+
               {warn.length ? (
                 <div
                   style={sx(
