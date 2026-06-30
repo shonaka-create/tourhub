@@ -62,7 +62,8 @@ body {
    Responsive layer
    The UI is built with inline styles, so responsiveness is layered on via
    utility classes whose media queries override the inline grid/layout with
-   !important. Breakpoints: tablet <=1024px, phone <=600px.
+   !important. Breakpoints: tablet/below <=1200px (drawer nav + grid stacking
+   so tablet landscape widths like iPad 1180/1194px are covered), phone <=600px.
    ===================================================================== */
 
 /* Hamburger toggle: hidden on desktop, shown when the drawer is enabled. */
@@ -75,7 +76,7 @@ body {
   display: none;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   /* --- Sidebar becomes an off-canvas drawer --- */
   .app-sidebar {
     position: fixed !important;
@@ -119,16 +120,7 @@ body {
     padding: 16px 14px 32px !important;
   }
 
-  /* --- Grid collapses --- */
-  .r-grid-4 {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
-  .r-grid-3 {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
-  .r-split {
-    grid-template-columns: 1fr !important;
-  }
+  /* --- Multi-column input forms collapse to 2 columns --- */
   .r-form {
     grid-template-columns: 1fr 1fr !important;
   }
@@ -143,6 +135,21 @@ body {
   }
   .r-twwrap {
     min-width: 760px;
+  }
+}
+
+/* Portrait tablets and below: stack the dense grids that would otherwise
+   crush. Landscape tablets (1025-1200px) keep their multi-column layout
+   because the drawer reclaims the 248px the sidebar used to take. */
+@media (max-width: 1024px) {
+  .r-grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .r-grid-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .r-split {
+    grid-template-columns: 1fr !important;
   }
 }
 
