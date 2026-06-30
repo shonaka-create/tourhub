@@ -47,6 +47,7 @@ export function FloatingChat({
 
   return (
     <div
+      className="chat-panel"
       style={{
         ...sx(
           "position:absolute;right:24px;bottom:24px;width:360px;height:520px;background:#fff;border-radius:18px;box-shadow:0 22px 60px rgba(8,60,100,.32);display:flex;flex-direction:column;overflow:hidden;z-index:50;border:1px solid #E0EBF2"

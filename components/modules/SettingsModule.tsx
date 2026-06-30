@@ -158,6 +158,8 @@ export function SettingsModule() {
           ユーザー権限
         </div>
         <div style={sx(label + "margin:4px 0 16px")}>役割ごとに操作できる範囲を制御します</div>
+        <div className="r-scroll">
+        <div className="r-twwrap">
         <div
           style={sx(
             "display:grid;grid-template-columns:1.4fr 1.2fr repeat(4,.8fr);gap:10px;padding:0 6px 10px;font-size:11px;font-weight:700;color:" + C.sub
@@ -197,6 +199,8 @@ export function SettingsModule() {
             ))}
           </div>
         ))}
+        </div>
+        </div>
       </section>
 
       <div style={sx("display:flex;align-items:center;gap:14px")}>

@@ -3,16 +3,16 @@
 import { useEffect, useState } from "react";
 import { sx } from "@/lib/sx";
 import { NavId, headers } from "@/lib/data";
-import { booking, asset } from "@/lib/modules-static";
+import { asset } from "@/lib/modules-static";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { Dashboard } from "@/components/Dashboard";
 import { FloatingChat } from "@/components/FloatingChat";
 import { StaticModule } from "@/components/StaticModule";
+import { BookingModule } from "@/components/modules/BookingModule";
 import { AssignModule } from "@/components/modules/AssignModule";
 import { CrmModule } from "@/components/modules/CrmModule";
 import { ManifestModule } from "@/components/modules/ManifestModule";
-import { RouteModule } from "@/components/modules/RouteModule";
 import { SettingsModule } from "@/components/modules/SettingsModule";
 import { SalesModule } from "@/components/modules/SalesModule";
 
@@ -20,6 +20,7 @@ export default function Page() {
   const [active, setActive] = useState<NavId>("dashboard");
   const [showStorm, setShowStorm] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const [thread, setThread] = useState("snorkel");
   const [clock, setClock] = useState("09:42");
 
@@ -44,13 +45,11 @@ export default function Page() {
           <Dashboard showStorm={showStorm} onDismissStorm={() => setShowStorm(false)} />
         );
       case "booking":
-        return <StaticModule html={booking()} />;
+        return <BookingModule />;
       case "assign":
         return <AssignModule />;
       case "asset":
         return <StaticModule html={asset()} />;
-      case "route":
-        return <RouteModule />;
       case "crm":
         return <CrmModule />;
       case "manifest":
@@ -68,11 +67,33 @@ export default function Page() {
         "display:flex;height:100vh;width:100%;background:#EEF5FA;color:#0E2A3D;overflow:hidden;font-size:14px"
       )}
     >
-      <Sidebar active={active} onSelect={setActive} />
+      <Sidebar
+        active={active}
+        onSelect={(id) => {
+          setActive(id);
+          setNavOpen(false);
+        }}
+        open={navOpen}
+      />
+
+      <div
+        className={"app-overlay" + (navOpen ? " show" : "")}
+        onClick={() => setNavOpen(false)}
+      />
 
       <div style={sx("flex:1;display:flex;flex-direction:column;overflow:hidden")}>
-        <Topbar title={title} sub={sub} clock={clock} />
-        <main style={sx("flex:1;overflow-y:auto;padding:22px 26px 40px")}>{renderMain()}</main>
+        <Topbar
+          title={title}
+          sub={sub}
+          clock={clock}
+          onMenu={() => setNavOpen(true)}
+        />
+        <main
+          className="app-main"
+          style={sx("flex:1;overflow-y:auto;padding:22px 26px 40px")}
+        >
+          {renderMain()}
+        </main>
       </div>
 
       <FloatingChat

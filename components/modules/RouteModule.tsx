@@ -26,11 +26,14 @@ const PICKUPS: Pickup[] = [
 
 const TOURS = ["全ツアー", "スノーケル", "パラセーリング", "ジェットスキー"];
 
-export function RouteModule() {
-  const [tour, setTour] = useState("全ツアー");
+// 参加者名簿モジュールに集約した送迎・ルートパネル。
+// lockedTour を渡すと、そのツアーの送迎に絞り込み・ツアー切替UIを隠す。
+export function TransferPanel({ lockedTour }: { lockedTour?: string }) {
+  const [tourSel, setTourSel] = useState("全ツアー");
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [locState, setLocState] = useState<"idle" | "loading" | "error">("idle");
 
+  const tour = lockedTour ?? tourSel;
   const list = PICKUPS.filter((p) => tour === "全ツアー" || p.tour === tour);
   const totalPax = list.reduce((s, p) => s + p.pax, 0);
   const hotels = new Set(list.map((p) => p.h)).size;
@@ -63,27 +66,29 @@ export function RouteModule() {
 
   return (
     <>
-      {/* TOUR SWITCHER */}
-      <div style={sx("display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px")}>
-        {TOURS.map((t) => {
-          const on = t === tour;
-          const n = PICKUPS.filter((p) => t === "全ツアー" || p.tour === t).length;
-          return (
-            <div
-              key={t}
-              onClick={() => setTour(t)}
-              style={sx(
-                "padding:9px 16px;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;" +
-                  (on ? "background:" + C.blue + ";color:#fff" : "background:" + C.soft + ";color:" + C.sub)
-              )}
-            >
-              {t} <span style={sx("opacity:.7;font-size:11px")}>({n})</span>
-            </div>
-          );
-        })}
-      </div>
+      {/* TOUR SWITCHER（単独表示時のみ。名簿に集約時はツアー選択を共有するため非表示） */}
+      {!lockedTour ? (
+        <div style={sx("display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px")}>
+          {TOURS.map((t) => {
+            const on = t === tour;
+            const n = PICKUPS.filter((p) => t === "全ツアー" || p.tour === t).length;
+            return (
+              <div
+                key={t}
+                onClick={() => setTourSel(t)}
+                style={sx(
+                  "padding:9px 16px;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;" +
+                    (on ? "background:" + C.blue + ";color:#fff" : "background:" + C.soft + ";color:" + C.sub)
+                )}
+              >
+                {t} <span style={sx("opacity:.7;font-size:11px")}>({n})</span>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
 
-      <div style={sx("display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:start")}>
+      <div className="r-split" style={sx("display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:start")}>
         {/* LEFT: pickup list */}
         <section style={sx(card + "padding:18px 20px")}>
           <div style={sx("display:flex;align-items:center;justify-content:space-between;margin-bottom:6px")}>
@@ -93,6 +98,11 @@ export function RouteModule() {
             </div>
           </div>
           <div style={sx(label + "margin-bottom:6px")}>ピックアップ対象をツアー別・日別に自動集計</div>
+          {list.length === 0 ? (
+            <div style={sx("padding:24px 4px;font-size:13px;color:" + C.sub)}>
+              このツアーの送迎対象はありません
+            </div>
+          ) : null}
           {list.map((p, i) => (
             <div
               key={i}

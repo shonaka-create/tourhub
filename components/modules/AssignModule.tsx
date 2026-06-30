@@ -205,7 +205,7 @@ export function AssignModule() {
   };
 
   return (
-    <div style={sx("display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start")}>
+    <div className="r-split" style={sx("display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start")}>
       {/* POOL */}
       <section style={sx(card + "padding:16px 16px 18px;display:flex;flex-direction:column;gap:18px")}>
         <div style={sx(label)}>ツアーへドラッグして割当 ・ ＋でカテゴリに項目を追加</div>

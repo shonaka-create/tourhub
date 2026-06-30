@@ -57,3 +57,108 @@ body {
 .font-outfit {
   font-family: var(--font-outfit), sans-serif;
 }
+
+/* =====================================================================
+   Responsive layer
+   The UI is built with inline styles, so responsiveness is layered on via
+   utility classes whose media queries override the inline grid/layout with
+   !important. Breakpoints: tablet <=1024px, phone <=600px.
+   ===================================================================== */
+
+/* Hamburger toggle: hidden on desktop, shown when the drawer is enabled. */
+.nav-toggle {
+  display: none;
+}
+
+/* Drawer overlay: hidden until opened on small screens. */
+.app-overlay {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  /* --- Sidebar becomes an off-canvas drawer --- */
+  .app-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh !important;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.26s ease;
+  }
+  .app-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 0 0 50px rgba(6, 40, 61, 0.4);
+  }
+  .app-overlay.show {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 40, 61, 0.45);
+    z-index: 150;
+  }
+  .nav-toggle {
+    display: flex !important;
+  }
+
+  /* --- Topbar compaction --- */
+  .app-topbar {
+    padding: 0 14px !important;
+    gap: 12px !important;
+  }
+  .topbar-search {
+    display: none !important;
+  }
+  .topbar-date {
+    display: none !important;
+  }
+
+  /* --- Main content padding --- */
+  .app-main {
+    padding: 16px 14px 32px !important;
+  }
+
+  /* --- Grid collapses --- */
+  .r-grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .r-grid-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .r-split {
+    grid-template-columns: 1fr !important;
+  }
+  .r-form {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .r-wrap {
+    flex-wrap: wrap !important;
+  }
+
+  /* --- Wide data tables scroll horizontally --- */
+  .r-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .r-twwrap {
+    min-width: 760px;
+  }
+}
+
+@media (max-width: 600px) {
+  .r-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+  .r-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Floating chat fills most of the screen on phones. */
+  .chat-panel {
+    width: calc(100vw - 24px) !important;
+    height: calc(100vh - 96px) !important;
+    right: 12px !important;
+    bottom: 12px !important;
+  }
+}

@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sx } from "@/lib/sx";
 import { C, card, h2, label, btn, pill } from "@/lib/theme";
 import { Html } from "../Html";
+import { TransferPanel } from "./RouteModule";
+import { TourSlot, fetchTours } from "@/lib/tours";
+
+// 本日の運行日（Topbar と同じ表記に統一）
+const TOUR_DATE = "2026年6月28日 (日)";
+const TOUR_DATE_ISO = "2026-06-28"; // 予約・カレンダーで登録したツアー枠の照合キー
 
 interface Booking {
   id: string;
@@ -17,9 +23,9 @@ interface Booking {
 }
 
 const TOURS = [
-  { id: "m1", name: "モーニング・スノーケル", time: "08:00", guide: "K. Lee", van: "バン #2", meet: "Cavill Ave 桟橋" },
-  { id: "m2", name: "パラセーリング 第1便", time: "09:30", guide: "M. Tan", van: "バン #4", meet: "Marina Mirage" },
-  { id: "m3", name: "ジェットスキー体験", time: "11:00", guide: "J. Park", van: "バン #7", meet: "Mariners Cove" },
+  { id: "m1", name: "モーニング・スノーケル", time: "08:00", guide: "K. Lee", van: "バン #2", meet: "Cavill Ave 桟橋", route: "スノーケル" },
+  { id: "m2", name: "パラセーリング 第1便", time: "09:30", guide: "M. Tan", van: "バン #4", meet: "Marina Mirage", route: "パラセーリング" },
+  { id: "m3", name: "ジェットスキー体験", time: "11:00", guide: "J. Park", van: "バン #7", meet: "Mariners Cove", route: "ジェットスキー" },
 ];
 
 const DATASET: Record<string, Booking[]> = {
@@ -52,6 +58,25 @@ export function ManifestModule() {
   const [sos, setSos] = useState(false);
   const [reminded, setReminded] = useState(false);
   const [tid, setTid] = useState("m1");
+  const [view, setView] = useState<"roster" | "transfer">("roster");
+  // 当日未収の回収状況（予約ID単位）
+  const [collected, setCollected] = useState<Record<string, boolean>>({});
+  // 予約・カレンダーで登録されたツアー枠（Supabase から相互参照）
+  const [regTours, setRegTours] = useState<TourSlot[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetchTours()
+      .then((rows) => {
+        if (active) setRegTours(rows.filter((t) => t.date === TOUR_DATE_ISO));
+      })
+      .catch(() => {
+        /* 未ログイン・テーブル未作成時は参照パネルを表示しないだけ */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const tour = TOURS.find((t) => t.id === tid)!;
   const bookings = DATASET[tid];
@@ -61,8 +86,11 @@ export function ManifestModule() {
   const allParts = bookings.flatMap((b) => b.participants);
   const totalPax = allParts.length;
   const ciPax = allParts.filter((p) => checked[p.id]).length;
-  const dueTotal = bookings.filter((b) => b.pay === "due").reduce((a, b) => a + b.due, 0);
-  const dueCount = bookings.filter((b) => b.pay === "due").length;
+  const dueBookings = bookings.filter((b) => b.pay === "due");
+  const outstanding = dueBookings.filter((b) => !collected[b.id]);
+  const dueTotal = outstanding.reduce((a, b) => a + b.due, 0);
+  const dueCount = outstanding.length;
+  const collectedCount = dueBookings.length - outstanding.length;
 
   function checkAllInBooking(b: Booking, value: boolean) {
     setChecked((c) => {
@@ -83,7 +111,17 @@ export function ManifestModule() {
   const stat = [
     { k: "参加者", v: totalPax + "名", s: bookings.length + "予約", c: C.blue },
     { k: "出席確認", v: ciPax + "/" + totalPax + "名", s: Math.round((ciPax / totalPax) * 100) + "% 完了", c: C.green },
-    { k: "未収金", v: "$" + dueTotal, s: dueCount + "件 要回収", c: dueTotal ? C.red : C.green },
+    {
+      k: "未収金",
+      v: "$" + dueTotal,
+      s:
+        dueCount > 0
+          ? dueCount + "件 要回収" + (collectedCount ? " ・ " + collectedCount + "件回収済" : "")
+          : collectedCount
+          ? "全" + collectedCount + "件 回収済"
+          : "未収なし",
+      c: dueTotal ? C.red : C.green,
+    },
     {
       k: "ツアー状態",
       v: isStarted ? "開始済" : unlocked ? "出発可" : "ロック中",
@@ -130,6 +168,93 @@ export function ManifestModule() {
 
   return (
     <>
+      {/* DATE + VIEW TABS */}
+      <div style={sx("display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px")}>
+        <div style={sx("display:flex;align-items:center;gap:10px")}>
+          <Html
+            html={
+              '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="' +
+              C.deep +
+              '" stroke-width="2"/><path d="M3 9h18M8 3v4M16 3v4" stroke="' +
+              C.deep +
+              '" stroke-width="2" stroke-linecap="round"/></svg>'
+            }
+          />
+          <div>
+            <div style={sx("font-size:11px;color:" + C.sub + ";font-weight:700;letter-spacing:.3px")}>
+              本日の運行日
+            </div>
+            <div className="font-outfit" style={sx("font-size:18px;font-weight:800;color:" + C.ink)}>
+              {TOUR_DATE}
+            </div>
+          </div>
+        </div>
+        <div style={sx("display:flex;background:" + C.soft + ";border-radius:12px;padding:4px;gap:4px")}>
+          {([
+            ["roster", "出席・名簿"],
+            ["transfer", "送迎・ルート"],
+          ] as const).map(([id, lbl]) => {
+            const on = view === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setView(id)}
+                style={sx(
+                  "border:none;font-family:inherit;font-weight:700;font-size:13px;padding:8px 18px;border-radius:9px;cursor:pointer;transition:.15s;" +
+                    (on
+                      ? "background:#fff;color:" + C.blue + ";box-shadow:0 2px 8px rgba(0,0,0,.08)"
+                      : "background:transparent;color:" + C.sub)
+                )}
+              >
+                {lbl}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* REGISTERED TOUR SLOTS (予約・カレンダーから相互参照) */}
+      {regTours.length ? (
+        <section style={sx(card + "padding:14px 18px;margin-bottom:16px")}>
+          <div style={sx("display:flex;align-items:center;gap:8px;margin-bottom:4px")}>
+            <Html
+              html={
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="' +
+                C.deep +
+                '" stroke-width="2"/><path d="M3 9h18M8 3v4M16 3v4" stroke="' +
+                C.deep +
+                '" stroke-width="2" stroke-linecap="round"/></svg>'
+              }
+            />
+            <div style={sx(h2 + "font-size:14px")}>予約・カレンダーで登録されたツアー枠</div>
+            <Html html={pill(regTours.length + "枠", C.deep, "#E3F2FB")} />
+          </div>
+          <div style={sx(label + "margin-bottom:10px")}>
+            上限枠・担当管理者情報を相互参照（参加者の取込は今後OTA連携で対応）
+          </div>
+          <div style={sx("display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px")}>
+            {regTours.map((t) => (
+              <div key={t.id} style={sx("border:1px solid " + C.line + ";border-radius:12px;padding:11px 13px;background:#F9FCFE")}>
+                <div style={sx("display:flex;align-items:center;gap:8px")}>
+                  <span className="font-outfit" style={sx("font-weight:700;font-size:14px;color:" + C.blue)}>{t.time}</span>
+                  <span style={sx("font-weight:700;font-size:13px")}>{t.name}</span>
+                </div>
+                <div style={sx("font-size:11px;color:" + C.sub + ";margin-top:5px")}>
+                  担当 {t.manager || "未設定"}
+                  {t.contact ? " ・ " + t.contact : ""}
+                </div>
+                <div style={sx("display:flex;align-items:center;justify-content:space-between;margin-top:6px")}>
+                  <span style={sx("font-size:11px;color:" + C.sub)}>{t.meet || "集合場所未設定"}</span>
+                  <span className="font-outfit" style={sx("font-weight:700;font-size:13px;color:" + C.ink)}>
+                    予約 {t.booked}/{t.capacity}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {/* TOUR SELECTOR */}
       <div style={sx("display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px")}>
         {TOURS.map((t) => {
@@ -163,10 +288,13 @@ export function ManifestModule() {
         })}
       </div>
 
-      <div style={sx("display:grid;grid-template-columns:1fr 330px;gap:18px;align-items:start")}>
+      {view === "transfer" ? (
+        <TransferPanel lockedTour={tour.route} />
+      ) : (
+      <div className="r-split" style={sx("display:grid;grid-template-columns:1fr 330px;gap:18px;align-items:start")}>
         {/* LEFT */}
         <div style={sx("display:flex;flex-direction:column;gap:16px")}>
-          <div style={sx("display:grid;grid-template-columns:repeat(4,1fr);gap:13px")}>
+          <div className="r-grid-4" style={sx("display:grid;grid-template-columns:repeat(4,1fr);gap:13px")}>
             {stat.map((x, i) => (
               <div key={i} style={sx(card + "padding:14px 18px")}>
                 <div style={sx(label)}>{x.k}</div>
@@ -226,13 +354,30 @@ export function ManifestModule() {
                           {b.note ? " ・ " + b.note : ""}
                         </div>
                       </div>
-                      <Html
-                        html={
-                          b.pay === "due"
-                            ? pill("未収 $" + b.due, C.red, "#FDEBEB")
-                            : pill("決済済", C.green, "#E4F6EC")
-                        }
-                      />
+                      {b.pay === "due" ? (
+                        <div style={sx("display:flex;align-items:center;gap:8px")}>
+                          <Html
+                            html={
+                              collected[b.id]
+                                ? pill("回収済", C.green, "#E4F6EC")
+                                : pill("未収 $" + b.due, C.red, "#FDEBEB")
+                            }
+                          />
+                          <button
+                            onClick={() => setCollected((c) => ({ ...c, [b.id]: !c[b.id] }))}
+                            style={sx(
+                              "border:none;font-family:inherit;font-weight:700;font-size:11px;padding:6px 10px;border-radius:9px;cursor:pointer;white-space:nowrap;" +
+                                (collected[b.id]
+                                  ? "background:" + C.soft + ";color:" + C.sub
+                                  : "background:#FDEBEB;color:" + C.red)
+                            )}
+                          >
+                            {collected[b.id] ? "未収に戻す" : "回収済にする"}
+                          </button>
+                        </div>
+                      ) : (
+                        <Html html={pill("決済済", C.green, "#E4F6EC")} />
+                      )}
                       <button
                         onClick={() => checkAllInBooking(b, !allOn)}
                         style={sx(
@@ -397,6 +542,7 @@ export function ManifestModule() {
           </section>
         </div>
       </div>
+      )}
     </>
   );
 }

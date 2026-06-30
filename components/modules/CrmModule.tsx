@@ -67,7 +67,7 @@ export function CrmModule() {
   return (
     <div>
       {/* SUMMARY STRIP */}
-      <div style={sx("display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px")}>
+      <div className="r-grid-4" style={sx("display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px")}>
         {[
           { k: "登録代理店", v: agents.length + "社", c: C.blue },
           { k: "今月の予約", v: agents.reduce((s, a) => s + a.bookings, 0) + "件", c: C.teal },
@@ -123,6 +123,7 @@ export function CrmModule() {
         {/* ADD FORM */}
         {adding ? (
           <div
+            className="r-form"
             style={sx(
               "background:#F2FAFE;border:1.5px solid #CFE7F4;border-radius:14px;padding:16px;margin:0 4px 16px;display:grid;grid-template-columns:1.4fr .8fr 1.4fr .7fr auto;gap:11px;align-items:end"
             )}
@@ -174,6 +175,8 @@ export function CrmModule() {
           </div>
         ) : null}
 
+        <div className="r-scroll">
+        <div className="r-twwrap">
         <div
           style={sx(
             "display:grid;grid-template-columns:1.5fr .7fr 1.4fr .8fr 1fr .8fr 1fr 30px;gap:12px;padding:0 16px 10px;font-size:11px;font-weight:700;color:" +
@@ -238,6 +241,8 @@ export function CrmModule() {
           <span className="font-outfit" style={sx("font-weight:800;font-size:22px;color:" + C.green)}>
             ${total.toLocaleString()}
           </span>
+        </div>
+        </div>
         </div>
 
         <div

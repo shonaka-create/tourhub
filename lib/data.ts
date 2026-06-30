@@ -6,7 +6,6 @@ export type NavId =
   | "booking"
   | "assign"
   | "asset"
-  | "route"
   | "crm"
   | "manifest"
   | "sales"
@@ -50,12 +49,6 @@ export const navItems: NavItem[] = [
     badgeColor: "#F97316",
   },
   {
-    id: "route",
-    label: "送迎・ルート",
-    iconPath:
-      '<path d="M3 17h2m14 0h2M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0Zm10 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0Z" stroke="CUR" stroke-width="2"/><path d="M5 17V8a2 2 0 0 1 2-2h6l4 4v7" stroke="CUR" stroke-width="2" stroke-linejoin="round"/>',
-  },
-  {
     id: "crm",
     label: "代理店管理",
     iconPath:
@@ -83,12 +76,11 @@ export const navItems: NavItem[] = [
 
 export const headers: Record<NavId, [string, string]> = {
   dashboard: ["ダッシュボード", "司令塔・例外管理"],
-  booking: ["予約・カレンダー管理", "空き枠管理と事前案内の自動化"],
+  booking: ["予約・カレンダー管理", "上限枠・空き枠とツアー管理者情報の管理"],
   assign: ["アサイン・シフト管理", "人・車・機材の割り当て"],
   asset: ["機材・アセット管理", "空き枠と状態の維持"],
-  route: ["送迎・ルート管理", "ピックアップ最適化・現在地追跡"],
   crm: ["代理店管理", "代理店の登録と請求精算"],
-  manifest: ["参加者名簿・現場管理", "デジタルマニフェスト / 出席確認 / SOP管理"],
+  manifest: ["参加者名簿・現場管理", "デジタルマニフェスト / 出席確認 / 送迎 / SOP管理"],
   sales: ["売上・分析", "チャネル別売上と前週比の管理"],
   settings: ["設定", "システム設定"],
 };

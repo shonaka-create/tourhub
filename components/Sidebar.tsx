@@ -1,16 +1,20 @@
 import { sx } from "@/lib/sx";
 import { navItems, NavId } from "@/lib/data";
 import { Html } from "./Html";
+import { SidebarUser } from "./SidebarUser";
 
 export function Sidebar({
   active,
   onSelect,
+  open = false,
 }: {
   active: NavId;
   onSelect: (id: NavId) => void;
+  open?: boolean;
 }) {
   return (
     <aside
+      className={"app-sidebar" + (open ? " open" : "")}
       style={sx(
         "width:248px;flex-shrink:0;background:linear-gradient(180deg,#063A5E 0%,#0A5688 100%);color:#fff;display:flex;flex-direction:column;position:relative;overflow:hidden"
       )}
@@ -101,24 +105,7 @@ export function Sidebar({
         })}
       </nav>
 
-      <div
-        style={sx(
-          "padding:14px;border-top:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:10px"
-        )}
-      >
-        <div
-          style={sx(
-            "width:36px;height:36px;border-radius:10px;background:#0E486E;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#A9E5F0"
-          )}
-        >
-          YT
-        </div>
-        <div style={sx("flex:1;line-height:1.3")}>
-          <div style={sx("font-size:13px;font-weight:700")}>山田 太郎</div>
-          <div style={sx("font-size:11px;color:#9FD6EF")}>オペレーション本部</div>
-        </div>
-        <Html html='<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 10l5 5 5-5" stroke="#9FD6EF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' />
-      </div>
+      <SidebarUser />
     </aside>
   );
 }

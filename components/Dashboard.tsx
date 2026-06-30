@@ -1,6 +1,7 @@
 import { sx } from "@/lib/sx";
 import { kpis, timeline, alerts, channels } from "@/lib/data";
 import { Html } from "./Html";
+import { WeatherHero } from "./WeatherHero";
 
 export function Dashboard({
   showStorm,
@@ -14,6 +15,7 @@ export function Dashboard({
       {/* BAD WEATHER ALERT BANNER */}
       {showStorm ? (
         <div
+          className="r-wrap"
           style={{
             ...sx(
               "background:linear-gradient(100deg,#FFF3E6,#FFE8E8);border:1px solid #F7C39B;border-radius:16px;padding:16px 20px;display:flex;align-items:center;gap:16px;margin-bottom:18px"
@@ -60,6 +62,7 @@ export function Dashboard({
 
       {/* KPI STRIP */}
       <div
+        className="r-grid-4"
         style={sx(
           "display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px"
         )}
@@ -110,6 +113,7 @@ export function Dashboard({
 
       {/* ROW: weather + timeline | alerts */}
       <div
+        className="r-split"
         style={sx(
           "display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start"
         )}
@@ -141,87 +145,7 @@ export function Dashboard({
                 }}
               />
             </div>
-            <div style={sx("position:relative;padding:18px 22px")}>
-              <div style={sx("display:flex;justify-content:space-between;align-items:center")}>
-                <div
-                  style={sx(
-                    "display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#D6F3FF"
-                  )}
-                >
-                  <Html html='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 2v2m0 16v2M4 12H2m20 0h-2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5" stroke="#FFE08A" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="4.5" fill="#FFE08A"/></svg>' />{" "}
-                  サーファーズパラダイス沿岸 · ライブ
-                </div>
-                <span
-                  style={sx(
-                    "font-size:11px;background:rgba(255,255,255,.18);padding:4px 9px;border-radius:20px"
-                  )}
-                >
-                  OpenWeather 連携 · 09:30更新
-                </span>
-              </div>
-              <div style={sx("display:flex;align-items:flex-end;gap:20px;margin-top:8px")}>
-                <div
-                  className="font-outfit"
-                  style={sx("font-weight:800;font-size:52px;line-height:1")}
-                >
-                  24°<span style={sx("font-size:22px;opacity:.7")}>C</span>
-                </div>
-                <div style={sx("padding-bottom:8px;line-height:1.4")}>
-                  <div style={sx("font-weight:700;font-size:15px")}>晴れ時々曇り</div>
-                  <div style={sx("font-size:12px;color:#CDEFFB")}>体感 26° · 湿度 68%</div>
-                </div>
-              </div>
-              <div
-                style={sx(
-                  "display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px"
-                )}
-              >
-                <div
-                  style={sx(
-                    "background:rgba(255,255,255,.14);backdrop-filter:blur(4px);border-radius:12px;padding:11px 12px"
-                  )}
-                >
-                  <div style={sx("font-size:11px;color:#CDEFFB")}>風速</div>
-                  <div
-                    className="font-outfit"
-                    style={sx("font-weight:700;font-size:19px;margin-top:2px")}
-                  >
-                    14<span style={sx("font-size:11px;opacity:.7")}> m/s</span>
-                  </div>
-                  <div style={sx("font-size:10px;color:#FFCFA0;margin-top:1px")}>南東 · 強め</div>
-                </div>
-                <div style={sx("background:rgba(255,255,255,.14);border-radius:12px;padding:11px 12px")}>
-                  <div style={sx("font-size:11px;color:#CDEFFB")}>波高</div>
-                  <div
-                    className="font-outfit"
-                    style={sx("font-weight:700;font-size:19px;margin-top:2px")}
-                  >
-                    2.4<span style={sx("font-size:11px;opacity:.7")}> m</span>
-                  </div>
-                  <div style={sx("font-size:10px;color:#FFB4B4;margin-top:1px")}>基準超過 ⚠</div>
-                </div>
-                <div style={sx("background:rgba(255,255,255,.14);border-radius:12px;padding:11px 12px")}>
-                  <div style={sx("font-size:11px;color:#CDEFFB")}>満潮</div>
-                  <div
-                    className="font-outfit"
-                    style={sx("font-weight:700;font-size:19px;margin-top:2px")}
-                  >
-                    13:42
-                  </div>
-                  <div style={sx("font-size:10px;color:#CDEFFB;margin-top:1px")}>1.6m</div>
-                </div>
-                <div style={sx("background:rgba(255,255,255,.14);border-radius:12px;padding:11px 12px")}>
-                  <div style={sx("font-size:11px;color:#CDEFFB")}>UV指数</div>
-                  <div
-                    className="font-outfit"
-                    style={sx("font-weight:700;font-size:19px;margin-top:2px")}
-                  >
-                    8
-                  </div>
-                  <div style={sx("font-size:10px;color:#FFCFA0;margin-top:1px")}>非常に強い</div>
-                </div>
-              </div>
-            </div>
+            <WeatherHero />
           </section>
 
           {/* TODAY TIMELINE */}

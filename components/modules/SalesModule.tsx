@@ -181,6 +181,7 @@ export function SalesModule() {
 
         {adding ? (
           <div
+            className="r-form"
             style={sx(
               "background:#F2FAFE;border:1.5px solid #CFE7F4;border-radius:14px;padding:16px;margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px"
             )}
@@ -248,7 +249,8 @@ export function SalesModule() {
         ) : null}
 
         {entries.length ? (
-          <div style={sx("margin-top:16px")}>
+          <div className="r-scroll" style={sx("margin-top:16px")}>
+            <div className="r-twwrap">
             <div
               style={sx(
                 "display:grid;grid-template-columns:1fr 1.4fr 1.2fr 1.4fr .7fr 1fr .9fr 30px;gap:10px;padding:0 12px 9px;font-size:11px;font-weight:700;color:" +
@@ -307,6 +309,7 @@ export function SalesModule() {
                 ${regTotal.toLocaleString()}
               </span>
             </div>
+            </div>
           </div>
         ) : (
           <div
@@ -341,7 +344,7 @@ export function SalesModule() {
       </div>
 
       {/* KPI STRIP */}
-      <div style={sx("display:grid;grid-template-columns:repeat(4,1fr);gap:14px")}>
+      <div className="r-grid-4" style={sx("display:grid;grid-template-columns:repeat(4,1fr);gap:14px")}>
         {kpis.map((k, i) => (
           <div key={i} style={sx(card + "padding:16px 18px")}>
             <div style={sx(label)}>{k.k}</div>
