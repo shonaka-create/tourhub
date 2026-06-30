@@ -29,7 +29,7 @@ export function Topbar({
       >
         <Html html='<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="#0A5688" stroke-width="2" stroke-linecap="round"/></svg>' />
       </div>
-      <div style={sx("min-width:0")}>
+      <div className="topbar-title" style={sx("min-width:0")}>
         <div style={sx("font-size:18px;font-weight:900;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>{title}</div>
         <div style={sx("font-size:11px;color:#6E8BA0;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>{sub}</div>
       </div>

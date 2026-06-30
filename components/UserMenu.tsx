@@ -23,15 +23,15 @@ export function UserMenu() {
   const initial = name ? name.charAt(0).toUpperCase() : "?";
 
   return (
-    <div style={sx("display:flex;align-items:center;gap:10px")}>
+    <div style={sx("display:flex;align-items:center;gap:10px;flex-shrink:0")}>
       <div
         style={sx(
-          "width:34px;height:34px;border-radius:50%;background:#0A5688;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px"
+          "width:34px;height:34px;border-radius:50%;background:#0A5688;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0"
         )}
       >
         {initial}
       </div>
-      <div style={sx("line-height:1.2")}>
+      <div className="user-name" style={sx("line-height:1.2;white-space:nowrap")}>
         <div style={sx("font-size:13px;font-weight:700")}>{name || "—"}</div>
         <form action={signout}>
           <button

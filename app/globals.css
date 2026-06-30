@@ -161,6 +161,22 @@ body {
     grid-template-columns: 1fr !important;
   }
 
+  /* Phone header: drop the page title/subtitle (kept the hamburger + user). */
+  .topbar-title {
+    display: none !important;
+  }
+
+  /* Storm alert banner: stack vertically instead of crushing into a column. */
+  .storm-banner {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  .storm-banner > button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
   /* Floating chat fills most of the screen on phones. */
   .chat-panel {
     width: calc(100vw - 24px) !important;

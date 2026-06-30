@@ -15,7 +15,7 @@ export function Dashboard({
       {/* BAD WEATHER ALERT BANNER */}
       {showStorm ? (
         <div
-          className="r-wrap"
+          className="storm-banner"
           style={{
             ...sx(
               "background:linear-gradient(100deg,#FFF3E6,#FFE8E8);border:1px solid #F7C39B;border-radius:16px;padding:16px 20px;display:flex;align-items:center;gap:16px;margin-bottom:18px"
