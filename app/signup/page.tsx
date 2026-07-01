@@ -56,6 +56,36 @@ export default function SignupPage() {
         </div>
 
         <div style={sx("margin-bottom:14px")}>
+          <label htmlFor="orgName" style={labelStyle}>
+            組織名・会社名（新規に立ち上げる方のみ）
+          </label>
+          <input
+            id="orgName"
+            name="orgName"
+            type="text"
+            placeholder="例：Coast Tours 沖縄"
+            style={fieldStyle}
+          />
+          <div style={sx("font-size:11px;color:#7A93A6;margin-top:5px;line-height:1.5")}>
+            スタッフとして参加する方は空欄のまま、下の「招待コード」を入力してください。
+          </div>
+        </div>
+
+        <div style={sx("margin-bottom:14px")}>
+          <label htmlFor="inviteCode" style={labelStyle}>
+            招待コード（スタッフの方のみ）
+          </label>
+          <input
+            id="inviteCode"
+            name="inviteCode"
+            type="text"
+            autoComplete="off"
+            placeholder="オーナーから受け取ったコード"
+            style={fieldStyle}
+          />
+        </div>
+
+        <div style={sx("margin-bottom:14px")}>
           <label htmlFor="email" style={labelStyle}>
             メールアドレス
           </label>

@@ -1,23 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sx } from "@/lib/sx";
 import { C, card, h2, label, btn, pill } from "@/lib/theme";
 import { Html } from "../Html";
+import {
+  Member,
+  MemberPerms,
+  Invite,
+  Role,
+  EMPTY_PERMS,
+  fetchMyProfile,
+  fetchMembers,
+  fetchInvites,
+  updateMemberPerms,
+  updateMemberRole,
+  setMemberActive,
+  createInvite,
+  deleteInvite,
+} from "@/lib/members";
 
-interface RoleRow {
-  id: string;
-  name: string;
-  role: string;
-  perms: { booking: boolean; assign: boolean; sales: boolean; settings: boolean };
-}
-
-const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS: Record<keyof MemberPerms, string> = {
   booking: "予約編集",
   assign: "アサイン",
   sales: "売上閲覧",
   settings: "設定変更",
 };
+const PERM_KEYS = Object.keys(ROLE_LABELS) as (keyof MemberPerms)[];
+
+function Toggle({
+  on,
+  disabled,
+  onClick,
+}: {
+  on: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <span
+      onClick={disabled ? undefined : onClick}
+      style={sx(
+        "display:inline-flex;width:40px;height:23px;border-radius:13px;align-items:center;padding:2px;transition:.15s;" +
+          "cursor:" +
+          (disabled ? "not-allowed" : "pointer") +
+          ";opacity:" +
+          (disabled ? "0.55" : "1") +
+          ";background:" +
+          (on ? C.green : "#D5DEE6") +
+          ";justify-content:" +
+          (on ? "flex-end" : "flex-start")
+      )}
+    >
+      <span style={sx("width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)")} />
+    </span>
+  );
+}
 
 export function SettingsModule() {
   // 悪天候の基準値
@@ -33,22 +71,109 @@ export function SettingsModule() {
     { id: "storm", k: "悪天候リスケ案内", v: "本日の海況（波高{wave}m/風速{wind}m/s）により、{tour}をリスケ/返金いたします。" },
   ];
   const [templates, setTemplates] = useState(TEMPLATES);
-
-  // ユーザー権限
-  const [roles, setRoles] = useState<RoleRow[]>([
-    { id: "u1", name: "山田 太郎", role: "オペレーション本部", perms: { booking: true, assign: true, sales: true, settings: true } },
-    { id: "u2", name: "K. Lee", role: "現場ガイド", perms: { booking: false, assign: false, sales: false, settings: false } },
-    { id: "u3", name: "B. Cho", role: "ドライバー", perms: { booking: false, assign: false, sales: false, settings: false } },
-    { id: "u4", name: "受付 A", role: "フロント受付", perms: { booking: true, assign: false, sales: false, settings: false } },
-  ]);
-
   const [saved, setSaved] = useState(false);
 
-  function togglePerm(uid: string, key: keyof RoleRow["perms"]) {
-    setSaved(false);
-    setRoles((prev) =>
-      prev.map((r) => (r.id === uid ? { ...r, perms: { ...r.perms, [key]: !r.perms[key] } } : r))
-    );
+  // ── ユーザー権限（実データ）──
+  const [me, setMe] = useState<Member | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [membersError, setMembersError] = useState<string | null>(null);
+
+  const isOwner = me?.role === "owner";
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [profile, list] = await Promise.all([fetchMyProfile(), fetchMembers()]);
+        setMe(profile);
+        setMembers(list);
+        if (profile?.role === "owner") setInvites(await fetchInvites());
+      } catch (e: any) {
+        setMembersError(e?.message ?? "メンバー情報の取得に失敗しました。");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // オーナーは常に全権限扱い（表示上も全 ON・固定）
+  function effectivePerms(m: Member): MemberPerms {
+    if (m.role === "owner") return { booking: true, assign: true, sales: true, settings: true };
+    return m.perms;
+  }
+
+  async function togglePerm(m: Member, key: keyof MemberPerms) {
+    if (!isOwner || m.role === "owner") return;
+    const next = { ...m.perms, [key]: !m.perms[key] };
+    setMembers((prev) => prev.map((x) => (x.userId === m.userId ? { ...x, perms: next } : x)));
+    try {
+      await updateMemberPerms(m.userId, next);
+    } catch {
+      // 失敗したら元に戻す
+      setMembers((prev) => prev.map((x) => (x.userId === m.userId ? m : x)));
+      setMembersError("権限の更新に失敗しました。");
+    }
+  }
+
+  async function toggleRole(m: Member) {
+    if (!isOwner || m.userId === me?.userId) return; // 自分のロールは変更不可
+    const next: Role = m.role === "owner" ? "staff" : "owner";
+    setMembers((prev) => prev.map((x) => (x.userId === m.userId ? { ...x, role: next } : x)));
+    try {
+      await updateMemberRole(m.userId, next);
+    } catch {
+      setMembers((prev) => prev.map((x) => (x.userId === m.userId ? m : x)));
+      setMembersError("ロールの更新に失敗しました。");
+    }
+  }
+
+  async function toggleActive(m: Member) {
+    if (!isOwner || m.userId === me?.userId) return;
+    const next = !m.active;
+    setMembers((prev) => prev.map((x) => (x.userId === m.userId ? { ...x, active: next } : x)));
+    try {
+      await setMemberActive(m.userId, next);
+    } catch {
+      setMembers((prev) => prev.map((x) => (x.userId === m.userId ? m : x)));
+      setMembersError("状態の更新に失敗しました。");
+    }
+  }
+
+  // ── 招待発行フォーム ──
+  const [invRole, setInvRole] = useState<Role>("staff");
+  const [invPerms, setInvPerms] = useState<MemberPerms>({ ...EMPTY_PERMS });
+  const [inviting, setInviting] = useState(false);
+
+  async function issueInvite() {
+    setInviting(true);
+    try {
+      const inv = await createInvite(invRole, invRole === "owner" ? EMPTY_PERMS : invPerms);
+      setInvites((prev) => [inv, ...prev]);
+      setInvPerms({ ...EMPTY_PERMS });
+      setInvRole("staff");
+    } catch {
+      setMembersError("招待の発行に失敗しました。");
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  async function revokeInvite(id: string) {
+    setInvites((prev) => prev.filter((i) => i.id !== id));
+    try {
+      await deleteInvite(id);
+    } catch {
+      setMembersError("招待の取り消しに失敗しました。");
+    }
+  }
+
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  function copyCode(code: string) {
+    navigator.clipboard?.writeText(code).then(() => {
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 1500);
+    });
   }
 
   const inputStyle = sx(
@@ -151,59 +276,197 @@ export function SettingsModule() {
         </div>
       </section>
 
-      {/* ユーザー権限 */}
+      {/* ユーザー権限（実データ） */}
       <section style={sx(card + "padding:20px 22px")}>
         <div style={sx(h2 + "display:flex;align-items:center;gap:9px")}>
           <Html html='<svg width="19" height="19" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="#16A34A" stroke-width="2"/><path d="M5 20a7 7 0 0 1 14 0" stroke="#16A34A" stroke-width="2" stroke-linecap="round"/></svg>' />
-          ユーザー権限
+          メンバーと権限
         </div>
-        <div style={sx(label + "margin:4px 0 16px")}>役割ごとに操作できる範囲を制御します</div>
-        <div className="r-scroll">
-        <div className="r-twwrap">
-        <div
-          style={sx(
-            "display:grid;grid-template-columns:1.4fr 1.2fr repeat(4,.8fr);gap:10px;padding:0 6px 10px;font-size:11px;font-weight:700;color:" + C.sub
-          )}
-        >
-          <div>ユーザー</div>
-          <div>役割</div>
-          {Object.values(ROLE_LABELS).map((l) => (
-            <div key={l} style={sx("text-align:center")}>
-              {l}
-            </div>
-          ))}
+        <div style={sx(label + "margin:4px 0 16px")}>
+          組織に所属するメンバーの一覧です。
+          {isOwner
+            ? " オーナーは各メンバーのロール・操作権限を変更できます。"
+            : " 権限の変更はオーナーのみ可能です。"}
         </div>
-        {roles.map((r) => (
-          <div
-            key={r.id}
-            style={sx(
-              "display:grid;grid-template-columns:1.4fr 1.2fr repeat(4,.8fr);gap:10px;align-items:center;padding:11px 6px;border-bottom:1px solid #F0F5F8"
-            )}
-          >
-            <div style={sx("font-weight:700;font-size:13px")}>{r.name}</div>
-            <div style={sx("font-size:12px;color:" + C.sub)}>{r.role}</div>
-            {(Object.keys(ROLE_LABELS) as (keyof RoleRow["perms"])[]).map((k) => (
-              <div key={k} style={sx("text-align:center")}>
-                <span
-                  onClick={() => togglePerm(r.id, k)}
-                  style={sx(
-                    "display:inline-flex;width:40px;height:23px;border-radius:13px;cursor:pointer;align-items:center;padding:2px;transition:.15s;background:" +
-                      (r.perms[k] ? C.green : "#D5DEE6") +
-                      ";justify-content:" +
-                      (r.perms[k] ? "flex-end" : "flex-start")
-                  )}
-                >
-                  <span style={sx("width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)")} />
-                </span>
-              </div>
-            ))}
+
+        {membersError && (
+          <div style={sx("background:#FEF2F2;color:#B91C1C;border-radius:10px;padding:10px 13px;font-size:12px;margin-bottom:12px")}>
+            {membersError}
           </div>
-        ))}
-        </div>
-        </div>
+        )}
+
+        {loading ? (
+          <div style={sx("font-size:13px;color:" + C.sub + ";padding:8px 0")}>読み込み中…</div>
+        ) : (
+          <div className="r-scroll">
+            <div className="r-twwrap">
+              <div
+                style={sx(
+                  "display:grid;grid-template-columns:1.4fr 1fr repeat(4,.8fr) .8fr;gap:10px;padding:0 6px 10px;font-size:11px;font-weight:700;color:" + C.sub
+                )}
+              >
+                <div>ユーザー</div>
+                <div>ロール</div>
+                {Object.values(ROLE_LABELS).map((l) => (
+                  <div key={l} style={sx("text-align:center")}>{l}</div>
+                ))}
+                <div style={sx("text-align:center")}>状態</div>
+              </div>
+
+              {members.map((m) => {
+                const eff = effectivePerms(m);
+                const self = m.userId === me?.userId;
+                return (
+                  <div
+                    key={m.userId}
+                    style={sx(
+                      "display:grid;grid-template-columns:1.4fr 1fr repeat(4,.8fr) .8fr;gap:10px;align-items:center;padding:11px 6px;border-bottom:1px solid #F0F5F8"
+                    )}
+                  >
+                    <div style={sx("font-weight:700;font-size:13px")}>
+                      {m.displayName || "（無名）"}
+                      {self && <span style={sx("font-size:10px;color:" + C.sub + ";margin-left:6px")}>あなた</span>}
+                    </div>
+                    <div>
+                      <span
+                        onClick={isOwner && !self ? () => toggleRole(m) : undefined}
+                        title={isOwner && !self ? "クリックでロール切替" : undefined}
+                        style={sx(
+                          "display:inline-block;font-size:11px;font-weight:800;border-radius:20px;padding:3px 11px;" +
+                            "cursor:" + (isOwner && !self ? "pointer" : "default") + ";" +
+                            (m.role === "owner"
+                              ? "background:#FEF3C7;color:#92400E"
+                              : "background:#E3F2FB;color:" + C.deep)
+                        )}
+                      >
+                        {m.role === "owner" ? "オーナー" : "スタッフ"}
+                      </span>
+                    </div>
+                    {PERM_KEYS.map((k) => (
+                      <div key={k} style={sx("text-align:center")}>
+                        <Toggle
+                          on={eff[k]}
+                          disabled={!isOwner || m.role === "owner"}
+                          onClick={() => togglePerm(m, k)}
+                        />
+                      </div>
+                    ))}
+                    <div style={sx("text-align:center")}>
+                      {m.active ? (
+                        <span
+                          onClick={isOwner && !self ? () => toggleActive(m) : undefined}
+                          style={sx("font-size:11px;font-weight:700;color:" + C.green + ";cursor:" + (isOwner && !self ? "pointer" : "default"))}
+                        >
+                          有効
+                        </span>
+                      ) : (
+                        <span
+                          onClick={isOwner ? () => toggleActive(m) : undefined}
+                          style={sx("font-size:11px;font-weight:700;color:#B91C1C;cursor:" + (isOwner ? "pointer" : "default"))}
+                        >
+                          無効
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </section>
 
-      <div style={sx("display:flex;align-items:center;gap:14px")}>
+      {/* 招待（オーナーのみ） */}
+      {isOwner && (
+        <section style={sx(card + "padding:20px 22px")}>
+          <div style={sx(h2 + "display:flex;align-items:center;gap:9px")}>
+            <Html html='<svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#0E8FC9" stroke-width="2" stroke-linecap="round"/></svg>' />
+            メンバーを招待
+          </div>
+          <div style={sx(label + "margin:4px 0 16px")}>
+            招待コードを発行し、対象者に共有してください。新規登録画面でコードを入力すると、この組織に指定ロールで参加します。
+          </div>
+
+          <div style={sx("display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px")}>
+            <div>
+              <div style={sx(label + "margin-bottom:6px")}>ロール</div>
+              <select
+                value={invRole}
+                onChange={(e) => setInvRole(e.target.value as Role)}
+                style={sx("border:1px solid " + C.line + ";border-radius:10px;padding:9px 12px;font-family:inherit;font-size:13px;font-weight:700;color:" + C.ink + ";outline:none")}
+              >
+                <option value="staff">スタッフ</option>
+                <option value="owner">オーナー</option>
+              </select>
+            </div>
+            {invRole === "staff" && (
+              <div>
+                <div style={sx(label + "margin-bottom:6px")}>付与する権限</div>
+                <div style={sx("display:flex;gap:14px;flex-wrap:wrap")}>
+                  {PERM_KEYS.map((k) => (
+                    <label key={k} style={sx("display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;cursor:pointer")}>
+                      <input
+                        type="checkbox"
+                        checked={invPerms[k]}
+                        onChange={(e) => setInvPerms((p) => ({ ...p, [k]: e.target.checked }))}
+                      />
+                      {ROLE_LABELS[k]}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button
+              onClick={issueInvite}
+              disabled={inviting}
+              style={sx(btn(C.blue, "#fff") + "display:flex;align-items:center;gap:8px")}
+            >
+              {inviting ? "発行中…" : "招待コードを発行"}
+            </button>
+          </div>
+
+          {invites.length > 0 && (
+            <div style={sx("display:flex;flex-direction:column;gap:8px")}>
+              {invites.map((inv) => {
+                const used = !!inv.acceptedAt;
+                const expired = !used && inv.expiresAt !== null && new Date(inv.expiresAt) < new Date();
+                return (
+                  <div
+                    key={inv.id}
+                    style={sx("display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 13px;border:1px solid " + C.line + ";border-radius:10px;background:" + (used || expired ? "#F7FAFC" : "#fff"))}
+                  >
+                    <code style={sx("font-family:monospace;font-size:14px;font-weight:800;letter-spacing:1px;color:" + C.ink)}>{inv.code}</code>
+                    <span style={sx("font-size:11px;font-weight:700;color:" + (inv.role === "owner" ? "#92400E" : C.deep))}>
+                      {inv.role === "owner" ? "オーナー" : "スタッフ"}
+                    </span>
+                    <span style={sx("font-size:11px;color:" + C.sub)}>
+                      {used ? "使用済み" : expired ? "期限切れ" : "有効"}
+                    </span>
+                    {!used && !expired && (
+                      <>
+                        <button
+                          onClick={() => copyCode(inv.code)}
+                          style={sx("margin-left:auto;font-size:12px;font-weight:700;color:" + C.deep + ";background:#E3F2FB;border:none;border-radius:8px;padding:6px 12px;cursor:pointer")}
+                        >
+                          {copiedCode === inv.code ? "✓ コピー済" : "コードをコピー"}
+                        </button>
+                        <button
+                          onClick={() => revokeInvite(inv.id)}
+                          style={sx("font-size:12px;font-weight:700;color:#B91C1C;background:#FEF2F2;border:none;border-radius:8px;padding:6px 12px;cursor:pointer")}
+                        >
+                          取り消し
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      <div style={sx("display:flex;align-items:center;gap:14px;flex-wrap:wrap")}>
         <button
           onClick={() => setSaved(true)}
           style={sx(btn(saved ? C.green : C.blue, "#fff") + "display:flex;align-items:center;gap:8px")}
@@ -211,7 +474,8 @@ export function SettingsModule() {
           <Html html='<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 4h11l3 3v13H5V4Z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M8 4v5h7M8 14h8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>' />
           {saved ? "✓ 設定を保存しました" : "設定を保存"}
         </button>
-        {saved ? <span style={sx("font-size:12px;color:" + C.green + ";font-weight:700")}>すべての変更が反映されました</span> : null}
+        {saved ? <span style={sx("font-size:12px;color:" + C.green + ";font-weight:700")}>基準値・テンプレートを反映しました</span> : null}
+        <span style={sx("font-size:11px;color:" + C.sub)}>※ メンバーの権限・招待は変更後すぐ保存されます</span>
       </div>
     </div>
   );

@@ -22,10 +22,14 @@ function translate(message: string): string {
     return "メールアドレスの形式が正しくありません。";
   if (m.includes("rate limit") || m.includes("too many"))
     return "試行回数が多すぎます。しばらく待ってから再度お試しください。";
+  if (m.includes("invalid_invite_code"))
+    return "招待コードが無効か、有効期限が切れています。オーナーに再発行を依頼してください。";
   return `エラーが発生しました：${message}`;
 }
 
 // ── サインアップ（メアド・パスワード・表示名）──
+// 招待制: 招待コードがあれば既存組織へ join、なければ新規組織を作成し owner になる。
+// 実際の組織作成 / メンバー登録は DB トリガー handle_new_user が user_metadata を見て行う。
 export async function signup(
   _prev: AuthState,
   formData: FormData
@@ -33,6 +37,8 @@ export async function signup(
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const displayName = String(formData.get("displayName") ?? "").trim();
+  const inviteCode = String(formData.get("inviteCode") ?? "").trim();
+  const orgName = String(formData.get("orgName") ?? "").trim();
 
   if (!email || !password || !displayName)
     return { error: "すべての項目を入力してください。" };
@@ -44,8 +50,13 @@ export async function signup(
     email,
     password,
     options: {
-      // user_metadata.display_name に表示名を保存
-      data: { display_name: displayName },
+      // user_metadata に表示名・組織名・招待コードを保存（DB トリガーが参照）
+      data: {
+        display_name: displayName,
+        // 招待コードがあれば staff として join、なければ owner として新規組織作成
+        invite_code: inviteCode || null,
+        org_name: inviteCode ? null : orgName || null,
+      },
       // メール認証リンクのリダイレクト先（確認用ルート）
       emailRedirectTo: `${getSiteURL()}auth/confirm`,
     },
