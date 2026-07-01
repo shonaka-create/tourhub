@@ -340,54 +340,60 @@ export function ManifestModule() {
                         "display:flex;align-items:center;gap:12px;padding:11px 14px;background:" + C.soft
                       )}
                     >
-                      <Html html='<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 7h18v13H3V7Z" stroke="#6E8BA0" stroke-width="2" stroke-linejoin="round"/><path d="M8 7V4h8v3" stroke="#6E8BA0" stroke-width="2"/></svg>' />
-                      <div style={sx("flex:1;min-width:0")}>
-                        <div style={sx("font-weight:800;font-size:13px")}>
-                          予約者: {b.booker}
-                          {b.participants.length > 1 ? (
-                            <span style={sx("font-weight:700;font-size:11px;color:" + C.blue + ";margin-left:8px")}>
-                              団体 {b.participants.length}名
-                            </span>
-                          ) : null}
-                        </div>
-                        <div style={sx("font-size:11px;color:" + C.sub + ";margin-top:2px")}>
-                          {b.bk} ・ {b.ch}
-                          {b.note ? " ・ " + b.note : ""}
+                      {/* 予約者情報（縦潰れ防止のため最小幅を確保） */}
+                      <div style={sx("flex:1;min-width:190px;display:flex;align-items:center;gap:12px")}>
+                        <Html html='<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 7h18v13H3V7Z" stroke="#6E8BA0" stroke-width="2" stroke-linejoin="round"/><path d="M8 7V4h8v3" stroke="#6E8BA0" stroke-width="2"/></svg>' />
+                        <div style={sx("flex:1;min-width:0")}>
+                          <div style={sx("font-weight:800;font-size:13px")}>
+                            予約者: {b.booker}
+                            {b.participants.length > 1 ? (
+                              <span style={sx("font-weight:700;font-size:11px;color:" + C.blue + ";margin-left:8px")}>
+                                団体 {b.participants.length}名
+                              </span>
+                            ) : null}
+                          </div>
+                          <div style={sx("font-size:11px;color:" + C.sub + ";margin-top:2px")}>
+                            {b.bk} ・ {b.ch}
+                            {b.note ? " ・ " + b.note : ""}
+                          </div>
                         </div>
                       </div>
-                      {b.pay === "due" ? (
-                        <div style={sx("display:flex;align-items:center;gap:8px")}>
-                          <Html
-                            html={
-                              collected[b.id]
-                                ? pill("回収済", C.green, "#E4F6EC")
-                                : pill("未収 $" + b.due, C.red, "#FDEBEB")
-                            }
-                          />
-                          <button
-                            onClick={() => setCollected((c) => ({ ...c, [b.id]: !c[b.id] }))}
-                            style={sx(
-                              "border:none;font-family:inherit;font-weight:700;font-size:11px;padding:6px 10px;border-radius:9px;cursor:pointer;white-space:nowrap;" +
-                                (collected[b.id]
-                                  ? "background:" + C.soft + ";color:" + C.sub
-                                  : "background:#FDEBEB;color:" + C.red)
-                            )}
-                          >
-                            {collected[b.id] ? "未収に戻す" : "回収済にする"}
-                          </button>
-                        </div>
-                      ) : (
-                        <Html html={pill("決済済", C.green, "#E4F6EC")} />
-                      )}
-                      <button
-                        onClick={() => checkAllInBooking(b, !allOn)}
-                        style={sx(
-                          "border:none;font-family:inherit;font-weight:700;font-size:11px;padding:6px 10px;border-radius:9px;cursor:pointer;white-space:nowrap;" +
-                            (allOn ? "background:#E4F6EC;color:" + C.green : "background:" + C.blue + ";color:#fff")
+                      {/* 決済状況＋操作ボタン（狭い画面では下段に折返し） */}
+                      <div style={sx("display:flex;align-items:center;gap:8px;flex-wrap:wrap")}>
+                        {b.pay === "due" ? (
+                          <>
+                            <Html
+                              html={
+                                collected[b.id]
+                                  ? pill("回収済", C.green, "#E4F6EC")
+                                  : pill("未収 $" + b.due, C.red, "#FDEBEB")
+                              }
+                            />
+                            <button
+                              onClick={() => setCollected((c) => ({ ...c, [b.id]: !c[b.id] }))}
+                              style={sx(
+                                "border:none;font-family:inherit;font-weight:700;font-size:11px;padding:6px 10px;border-radius:9px;cursor:pointer;white-space:nowrap;" +
+                                  (collected[b.id]
+                                    ? "background:" + C.soft + ";color:" + C.sub
+                                    : "background:#FDEBEB;color:" + C.red)
+                              )}
+                            >
+                              {collected[b.id] ? "未収に戻す" : "回収済にする"}
+                            </button>
+                          </>
+                        ) : (
+                          <Html html={pill("決済済", C.green, "#E4F6EC")} />
                         )}
-                      >
-                        {allOn ? "全員出席済" : "この予約を全員出席"}
-                      </button>
+                        <button
+                          onClick={() => checkAllInBooking(b, !allOn)}
+                          style={sx(
+                            "border:none;font-family:inherit;font-weight:700;font-size:11px;padding:6px 10px;border-radius:9px;cursor:pointer;white-space:nowrap;" +
+                              (allOn ? "background:#E4F6EC;color:" + C.green : "background:" + C.blue + ";color:#fff")
+                          )}
+                        >
+                          {allOn ? "全員出席済" : "この予約を全員出席"}
+                        </button>
+                      </div>
                     </div>
 
                     {/* PARTICIPANT ROWS */}

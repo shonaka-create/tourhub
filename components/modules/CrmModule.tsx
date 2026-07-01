@@ -97,7 +97,7 @@ export function CrmModule() {
             <div style={sx(h2)}>代理店マスター ＆ 月末精算（2026年6月）</div>
             <div style={sx(label + "margin-top:3px")}>代理店を登録し、予約数・手数料率から回収額を自動集計</div>
           </div>
-          <div style={sx("display:flex;gap:9px")}>
+          <div className="r-wrap" style={sx("display:flex;gap:9px")}>
             <button
               onClick={() => setAdding((v) => !v)}
               style={sx(btn(C.blue, "#fff") + "display:flex;align-items:center;gap:7px")}

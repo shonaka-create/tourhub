@@ -25,8 +25,6 @@ export const navItems: NavItem[] = [
     label: "ダッシュボード",
     iconPath:
       '<path d="M4 13h7V4H4v9Zm0 7h7v-5H4v5Zm9 0h7v-9h-7v9Zm0-16v5h7V4h-7Z" stroke="CUR" stroke-width="2" stroke-linejoin="round"/>',
-    badge: "3",
-    badgeColor: "#E5484D",
   },
   {
     id: "booking",
@@ -45,8 +43,6 @@ export const navItems: NavItem[] = [
     label: "機材・アセット",
     iconPath:
       '<path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4Z" stroke="CUR" stroke-width="2" stroke-linejoin="round"/>',
-    badge: "2",
-    badgeColor: "#F97316",
   },
   {
     id: "crm",

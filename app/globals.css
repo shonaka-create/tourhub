@@ -171,6 +171,9 @@ body {
   }
 
   /* Phone header (per mockup): hamburger + page title + bell + logout icon. */
+  .topbar-title > div:first-child {
+    font-size: 15px !important; /* 長いページ名も省略されにくくする */
+  }
   .topbar-title > div:nth-child(2) {
     display: none !important; /* サブタイトルのみ隠してタイトルは表示 */
   }

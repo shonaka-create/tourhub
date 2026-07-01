@@ -466,18 +466,18 @@ export function SalesModule() {
           { n: "シティ・バイクツアー", rev: 2180, share: 45, pax: 70 },
           { n: "サンライズ・SUP", rev: 1560, share: 32, pax: 40 },
         ].map((t, i) => (
-          <div key={i} style={sx("display:flex;align-items:center;gap:14px;padding:11px 4px;border-bottom:1px solid #F0F5F8")}>
+          <div key={i} className="r-wrap" style={sx("display:flex;align-items:center;gap:14px;padding:11px 4px;border-bottom:1px solid #F0F5F8")}>
             <div
               className="font-outfit"
               style={sx(
-                "width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;background:" +
+                "width:26px;height:26px;flex-shrink:0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;background:" +
                   (i === 0 ? C.blue : "#9DB4C4")
               )}
             >
               {i + 1}
             </div>
-            <div style={sx("flex:1;font-size:13px;font-weight:700")}>{t.n}</div>
-            <div style={sx("width:140px;height:8px;background:#EAF0F5;border-radius:5px;overflow:hidden")}>
+            <div style={sx("flex:1;min-width:110px;font-size:13px;font-weight:700")}>{t.n}</div>
+            <div style={sx("flex:1;min-width:100px;height:8px;background:#EAF0F5;border-radius:5px;overflow:hidden")}>
               <div style={{ ...sx("height:100%;border-radius:5px;background:" + C.blue), width: t.share + "%" }} />
             </div>
             <div style={sx("font-size:12px;color:" + C.sub + ";width:60px;text-align:right")}>{t.pax}名</div>
