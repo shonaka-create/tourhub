@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { sx } from "@/lib/sx";
 import { Html } from "./Html";
 import { createClient } from "@/lib/supabase/client";
-import { fetchMembers } from "@/lib/members";
+import { Member, fetchMyProfile, fetchMembers, JOB_LABELS } from "@/lib/members";
 import { fetchTours } from "@/lib/tours";
 import {
   ChatThread,
   ChatMessage,
   fetchThreads,
   ensureTourThread,
+  ensureBroadcastThread,
+  fetchMyThreadMembers,
+  startDm,
   fetchMessages,
   sendMessage,
   subscribeMessages,
@@ -26,15 +29,35 @@ export function FloatingChat({
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [names, setNames] = useState<Record<string, string>>({});
-  const [meId, setMeId] = useState<string | null>(null);
+  const [me, setMe] = useState<Member | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [dmOther, setDmOther] = useState<Record<string, string>>({});
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [showNew, setShowNew] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // 開いたときに 自分ID / メンバー名 / 便グループ を用意
+  const names = useMemo(
+    () => Object.fromEntries(members.map((m) => [m.userId, m.displayName || "メンバー"])),
+    [members]
+  );
+  const meId = me?.userId ?? null;
+  const isHQ = me?.role === "owner" || me?.job === "ops";
+  const canPostBroadcast = me?.role === "owner";
+
+  // DM候補: 本部⇄スタッフのみ。本部は全員、スタッフは本部のみ。
+  const dmCandidates = useMemo(() => {
+    if (!me) return [];
+    return members.filter((m) => {
+      if (!m.active || m.userId === me.userId) return false;
+      const otherHQ = m.role === "owner" || m.job === "ops";
+      return isHQ ? true : otherHQ;
+    });
+  }, [members, me, isHQ]);
+
+  // 開いたときに プロフィール / メンバー / 便グループ・アナウンス を用意
   useEffect(() => {
     if (!open) return;
     let active = true;
@@ -42,16 +65,16 @@ export function FloatingChat({
       setLoading(true);
       setErr(null);
       try {
-        const supabase = createClient();
-        const { data: auth } = await supabase.auth.getUser();
-        if (active) setMeId(auth.user?.id ?? null);
-
-        const members = await fetchMembers().catch(() => []);
+        const [profile, list] = await Promise.all([
+          fetchMyProfile().catch(() => null),
+          fetchMembers().catch(() => [] as Member[]),
+        ]);
         if (active) {
-          setNames(Object.fromEntries(members.map((m) => [m.userId, m.displayName || "メンバー"])));
+          setMe(profile);
+          setMembers(list);
         }
 
-        // 登録済みツアーから便グループを自動用意（1ツアー=1スレッド・冪等）
+        await ensureBroadcastThread().catch(() => {});
         const tours = await fetchTours().catch(() => []);
         for (const t of tours.slice(-30)) {
           await ensureTourThread(
@@ -60,10 +83,16 @@ export function FloatingChat({
           ).catch(() => {});
         }
 
-        const list = await fetchThreads();
+        const [ths, tm] = await Promise.all([fetchThreads(), fetchMyThreadMembers().catch(() => [])]);
         if (!active) return;
-        setThreads(list);
-        setActiveId((cur) => cur ?? list[list.length - 1]?.id ?? null);
+        setThreads(ths);
+        const myId = profile?.userId;
+        const map: Record<string, string> = {};
+        for (const row of tm) {
+          if (myId && row.userId !== myId) map[row.threadId] = row.userId;
+        }
+        setDmOther(map);
+        setActiveId((cur) => cur ?? ths[ths.length - 1]?.id ?? null);
       } catch (e: any) {
         if (active) setErr(e?.message ?? "チャットの読み込みに失敗しました");
       } finally {
@@ -96,7 +125,6 @@ export function FloatingChat({
     };
   }, [activeId]);
 
-  // 新着で最下部へスクロール
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, activeId]);
@@ -115,6 +143,24 @@ export function FloatingChat({
     } finally {
       setSending(false);
     }
+  }
+
+  async function openDm(target: Member) {
+    setShowNew(false);
+    try {
+      const th = await startDm(target.userId, target.displayName || "メンバー");
+      setThreads((prev) => (prev.some((t) => t.id === th.id) ? prev : [...prev, th]));
+      setDmOther((prev) => ({ ...prev, [th.id]: target.userId }));
+      setActiveId(th.id);
+    } catch (e: any) {
+      setErr(e?.message ?? "DMの作成に失敗しました");
+    }
+  }
+
+  function threadLabel(th: ChatThread): string {
+    if (th.type === "broadcast") return "📢 全体アナウンス";
+    if (th.type === "dm") return names[dmOther[th.id]] || "DM";
+    return th.title || "便グループ";
   }
 
   function fmtTime(iso: string): string {
@@ -149,6 +195,8 @@ export function FloatingChat({
     "background:linear-gradient(120deg,#0E8FC9,#0A6FB0);color:#fff;border-radius:14px 14px 4px 14px;padding:9px 12px;font-size:12.5px;line-height:1.45;display:inline-block;text-align:left;white-space:pre-wrap;word-break:break-word";
 
   const active = threads.find((t) => t.id === activeId) || null;
+  const broadcastLocked = active?.type === "broadcast" && !canPostBroadcast;
+  const inputDisabled = !activeId || broadcastLocked;
 
   return (
     <div
@@ -175,7 +223,7 @@ export function FloatingChat({
         <div style={sx("flex:1;min-width:0")}>
           <div style={sx("font-weight:800;font-size:14px")}>オペレーションチャット</div>
           <div style={sx("font-size:11px;color:#BDE5F5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis")}>
-            {active ? active.title || "便グループ" : "現場 ⇄ 本部"}
+            {active ? threadLabel(active) : "便グループ・DM・アナウンス"}
           </div>
         </div>
         <div
@@ -188,9 +236,27 @@ export function FloatingChat({
         </div>
       </div>
 
-      {/* スレッドタブ（便グループ） */}
-      {threads.length > 0 ? (
-        <div style={sx("display:flex;gap:7px;padding:10px 12px;border-bottom:1px solid #EEF3F7;overflow-x:auto")}>
+      {/* スレッドタブ + 新規DM */}
+      {threads.length > 0 || dmCandidates.length > 0 ? (
+        <div style={sx("display:flex;gap:7px;padding:10px 12px;border-bottom:1px solid #EEF3F7;overflow-x:auto;align-items:center")}>
+          {dmCandidates.length > 0 ? (
+            <div
+              onClick={() => setShowNew((v) => !v)}
+              title="DMを開始"
+              style={sx(
+                "flex-shrink:0;width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:" +
+                  (showNew ? "#0E8FC9" : "#F0F6FA")
+              )}
+            >
+              <Html
+                html={
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="' +
+                  (showNew ? "#fff" : "#5A7488") +
+                  '" stroke-width="2" stroke-linecap="round"/></svg>'
+                }
+              />
+            </div>
+          ) : null}
           {threads.map((th) => {
             const on = th.id === activeId;
             return (
@@ -198,51 +264,80 @@ export function FloatingChat({
                 key={th.id}
                 onClick={() => setActiveId(th.id)}
                 style={sx(
-                  "flex-shrink:0;font-size:11px;font-weight:700;padding:7px 11px;border-radius:10px;cursor:pointer;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;" +
+                  "flex-shrink:0;font-size:11px;font-weight:700;padding:7px 11px;border-radius:10px;cursor:pointer;white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;" +
                     (on ? "background:#0E8FC9;color:#fff" : "background:#F0F6FA;color:#5A7488")
                 )}
-                title={th.title}
+                title={threadLabel(th)}
               >
-                {th.title || "便グループ"}
+                {threadLabel(th)}
               </div>
             );
           })}
         </div>
       ) : null}
 
-      {/* メッセージ */}
-      <div
-        style={sx(
-          "flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#F6FAFC"
-        )}
-      >
-        {loading ? (
-          <div style={sx("margin:auto;font-size:12px;color:#9DB4C4")}>読み込み中…</div>
-        ) : threads.length === 0 ? (
-          <div style={sx("margin:auto;text-align:center;font-size:12px;color:#9DB4C4;line-height:1.7;padding:0 10px")}>
-            便グループはまだありません。<br />
-            予約・カレンダーでツアー枠を登録すると、
-            そのツアーの便グループが自動で作成されます。
-          </div>
-        ) : messages.length === 0 ? (
-          <div style={sx("margin:auto;font-size:12px;color:#9DB4C4")}>まだメッセージはありません</div>
-        ) : (
-          messages.map((m) => {
-            const mine = m.senderId === meId;
-            return (
-              <div key={m.id} style={sx(mine ? right : left)}>
-                {!mine ? (
-                  <div style={sx("font-size:10px;color:#9DB4C4;margin:0 0 3px 4px;font-weight:600")}>
-                    {names[m.senderId] || "メンバー"}
-                  </div>
-                ) : null}
-                <div style={sx(mine ? bubbleR : bubbleL)}>{m.body}</div>
-                <div style={sx("font-size:9px;color:#B3C4D0;margin:3px 4px 0")}>{fmtTime(m.createdAt)}</div>
+      <div style={sx("flex:1;position:relative;display:flex;flex-direction:column;min-height:0")}>
+        {/* 新規DMポップオーバー */}
+        {showNew ? (
+          <div
+            style={sx(
+              "position:absolute;left:12px;right:12px;top:8px;z-index:5;background:#fff;border:1px solid #E0EBF2;border-radius:12px;box-shadow:0 12px 30px rgba(8,60,100,.2);max-height:70%;overflow-y:auto"
+            )}
+          >
+            <div style={sx("padding:10px 13px;font-size:11px;font-weight:800;color:#5A7488;border-bottom:1px solid #EEF3F7")}>
+              DMを開始（{isHQ ? "スタッフを選択" : "本部を選択"}）
+            </div>
+            {dmCandidates.map((m) => (
+              <div
+                key={m.userId}
+                onClick={() => openDm(m)}
+                style={sx("display:flex;align-items:center;gap:9px;padding:10px 13px;cursor:pointer;border-bottom:1px solid #F4F8FB")}
+              >
+                <div style={sx("width:28px;height:28px;border-radius:50%;background:#0A5688;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0")}>
+                  {(m.displayName || "?").charAt(0).toUpperCase()}
+                </div>
+                <div style={sx("flex:1;min-width:0")}>
+                  <div style={sx("font-size:13px;font-weight:700;color:#0E2A3D")}>{m.displayName || "（無名）"}</div>
+                  <div style={sx("font-size:10px;color:#9DB4C4")}>{JOB_LABELS[m.job]}{m.role === "owner" ? " ・ オーナー" : ""}</div>
+                </div>
               </div>
-            );
-          })
-        )}
-        <div ref={bottomRef} />
+            ))}
+          </div>
+        ) : null}
+
+        {/* メッセージ */}
+        <div
+          style={sx(
+            "flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#F6FAFC"
+          )}
+        >
+          {loading ? (
+            <div style={sx("margin:auto;font-size:12px;color:#9DB4C4")}>読み込み中…</div>
+          ) : threads.length === 0 ? (
+            <div style={sx("margin:auto;text-align:center;font-size:12px;color:#9DB4C4;line-height:1.7;padding:0 10px")}>
+              スレッドがまだありません。<br />
+              予約・カレンダーでツアー枠を登録すると便グループが作成されます。
+            </div>
+          ) : messages.length === 0 ? (
+            <div style={sx("margin:auto;font-size:12px;color:#9DB4C4")}>まだメッセージはありません</div>
+          ) : (
+            messages.map((m) => {
+              const mine = m.senderId === meId;
+              return (
+                <div key={m.id} style={sx(mine ? right : left)}>
+                  {!mine ? (
+                    <div style={sx("font-size:10px;color:#9DB4C4;margin:0 0 3px 4px;font-weight:600")}>
+                      {names[m.senderId] || "メンバー"}
+                    </div>
+                  ) : null}
+                  <div style={sx(mine ? bubbleR : bubbleL)}>{m.body}</div>
+                  <div style={sx("font-size:9px;color:#B3C4D0;margin:3px 4px 0")}>{fmtTime(m.createdAt)}</div>
+                </div>
+              );
+            })
+          )}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
       {err ? (
@@ -262,18 +357,24 @@ export function FloatingChat({
               send();
             }
           }}
-          disabled={!activeId}
-          placeholder={activeId ? "メッセージを入力…" : "便グループを選択してください"}
+          disabled={inputDisabled}
+          placeholder={
+            broadcastLocked
+              ? "アナウンスは本部のみ送信できます"
+              : activeId
+              ? "メッセージを入力…"
+              : "スレッドを選択してください"
+          }
           style={sx(
             "flex:1;box-sizing:border-box;background:#F0F6FA;border:1px solid #E6EEF4;border-radius:12px;padding:10px 13px;font-family:inherit;font-size:12.5px;color:#0E2A3D;outline:none" +
-              (!activeId ? ";opacity:.6" : "")
+              (inputDisabled ? ";opacity:.6" : "")
           )}
         />
         <div
           onClick={send}
           style={sx(
             "width:38px;height:38px;flex-shrink:0;border-radius:11px;background:" +
-              (input.trim() && activeId && !sending ? "#0E8FC9" : "#B7CEDD") +
+              (input.trim() && !inputDisabled && !sending ? "#0E8FC9" : "#B7CEDD") +
               ";display:flex;align-items:center;justify-content:center;cursor:pointer"
           )}
         >

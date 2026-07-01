@@ -82,6 +82,86 @@ export async function ensureTourThread(
   return threadFromRow(data);
 }
 
+// 組織の全体アナウンススレッド（無ければ作成・org に1つ）
+export async function ensureBroadcastThread(): Promise<ChatThread> {
+  const supabase = createClient();
+  const { data: existing } = await supabase
+    .from("chat_threads")
+    .select("*")
+    .eq("type", "broadcast")
+    .maybeSingle();
+  if (existing) return threadFromRow(existing);
+
+  const { data, error } = await supabase
+    .from("chat_threads")
+    .insert({ type: "broadcast", title: "全体アナウンス" })
+    .select()
+    .single();
+  if (error) {
+    const { data: again, error: e2 } = await supabase
+      .from("chat_threads")
+      .select("*")
+      .eq("type", "broadcast")
+      .single();
+    if (e2) throw error;
+    return threadFromRow(again);
+  }
+  return threadFromRow(data);
+}
+
+// 自分がアクセスできるスレッドのメンバー(thread_id, user_id)一覧。
+// DMの相手表示や便グループの参加者表示に使う。
+export async function fetchMyThreadMembers(): Promise<
+  { threadId: string; userId: string }[]
+> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("chat_members").select("thread_id,user_id");
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({ threadId: r.thread_id, userId: r.user_id }));
+}
+
+// 指定メンバーとの1:1 DM（無ければ作成）。当事者2名を chat_members に登録。
+export async function startDm(
+  otherUserId: string,
+  otherName: string
+): Promise<ChatThread> {
+  const supabase = createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  const me = auth.user?.id;
+  if (!me) throw new Error("未ログインです");
+
+  // 既存DMを探す: 自分の所属スレッドと相手の所属スレッドの共通 dm を再利用
+  const members = await fetchMyThreadMembers();
+  const mine = new Set(members.filter((m) => m.userId === me).map((m) => m.threadId));
+  const shared = members.filter((m) => m.userId === otherUserId && mine.has(m.threadId));
+  if (shared.length) {
+    const ids = shared.map((s) => s.threadId);
+    const { data: dm } = await supabase
+      .from("chat_threads")
+      .select("*")
+      .in("id", ids)
+      .eq("type", "dm")
+      .limit(1)
+      .maybeSingle();
+    if (dm) return threadFromRow(dm);
+  }
+
+  // 無ければ作成し、当事者2名を登録
+  const { data: created, error } = await supabase
+    .from("chat_threads")
+    .insert({ type: "dm", title: otherName })
+    .select()
+    .single();
+  if (error) throw error;
+  const thread = threadFromRow(created);
+  const { error: mErr } = await supabase.from("chat_members").insert([
+    { thread_id: thread.id, user_id: me },
+    { thread_id: thread.id, user_id: otherUserId },
+  ]);
+  if (mErr) throw mErr;
+  return thread;
+}
+
 export async function fetchMessages(threadId: string): Promise<ChatMessage[]> {
   const supabase = createClient();
   const { data, error } = await supabase
