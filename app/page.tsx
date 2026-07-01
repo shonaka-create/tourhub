@@ -21,7 +21,6 @@ export default function Page() {
   const [showStorm, setShowStorm] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
-  const [thread, setThread] = useState("snorkel");
   const [clock, setClock] = useState("09:42");
 
   useEffect(() => {
@@ -96,12 +95,7 @@ export default function Page() {
         </main>
       </div>
 
-      <FloatingChat
-        open={chatOpen}
-        onToggle={() => setChatOpen((v) => !v)}
-        thread={thread}
-        onThread={setThread}
-      />
+      <FloatingChat open={chatOpen} onToggle={() => setChatOpen((v) => !v)} />
     </div>
   );
 }
