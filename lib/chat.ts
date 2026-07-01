@@ -187,6 +187,43 @@ export async function sendMessage(
   return messageFromRow(data);
 }
 
+// スレッドを既読にする（自分の last_read_at を now で更新）。
+export async function markRead(threadId: string): Promise<void> {
+  const supabase = createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return;
+  await supabase.from("chat_reads").upsert(
+    { thread_id: threadId, user_id: auth.user.id, last_read_at: new Date().toISOString() },
+    { onConflict: "thread_id,user_id" }
+  );
+}
+
+// スレッドごとの未読数（thread_id -> 件数）。
+export async function fetchUnreadCounts(): Promise<Record<string, number>> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("chat_unread_counts");
+  if (error) throw error;
+  const out: Record<string, number> = {};
+  for (const r of (data ?? []) as any[]) out[r.thread_id] = Number(r.unread) || 0;
+  return out;
+}
+
+// 全メッセージのINSERTを購読（未読の再集計トリガー用）。payloadは信用せず件数はRLS越しに再取得する。
+export function subscribeAllMessages(onInsert: () => void): () => void {
+  const supabase = createClient();
+  const channel = supabase
+    .channel("chat:all")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "chat_messages" },
+      () => onInsert()
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
 // スレッドの新着メッセージを購読。返り値の関数で解除する。
 export function subscribeMessages(
   threadId: string,

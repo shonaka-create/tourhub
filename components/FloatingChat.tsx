@@ -17,6 +17,9 @@ import {
   fetchMessages,
   sendMessage,
   subscribeMessages,
+  subscribeAllMessages,
+  markRead,
+  fetchUnreadCounts,
 } from "@/lib/chat";
 
 export function FloatingChat({
@@ -37,7 +40,34 @@ export function FloatingChat({
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
+  const [unread, setUnread] = useState<Record<string, number>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const totalUnread = useMemo(
+    () => Object.values(unread).reduce((a, b) => a + b, 0),
+    [unread]
+  );
+
+  async function refreshUnread() {
+    try {
+      setUnread(await fetchUnreadCounts());
+    } catch {
+      /* 未ログイン等は無視 */
+    }
+  }
+
+  // 未読の初期取得＋全メッセージ購読（開閉に関係なくボタンのバッジを更新）
+  useEffect(() => {
+    refreshUnread();
+    const unsub = subscribeAllMessages(() => refreshUnread());
+    return unsub;
+  }, []);
+
+  // 表示中スレッドを既読化（開いている間・新着ごと）
+  useEffect(() => {
+    if (!open || !activeId) return;
+    markRead(activeId).then(refreshUnread).catch(() => {});
+  }, [open, activeId, messages.length]);
 
   const names = useMemo(
     () => Object.fromEntries(members.map((m) => [m.userId, m.displayName || "メンバー"])),
@@ -183,6 +213,16 @@ export function FloatingChat({
         }}
       >
         <Html html='<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.8A8 8 0 1 1 21 12Z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>' />
+        {totalUnread > 0 ? (
+          <span
+            className="font-outfit"
+            style={sx(
+              "position:absolute;top:-4px;right:-4px;background:#E5484D;color:#fff;font-weight:800;font-size:11px;min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:11px;display:flex;align-items:center;justify-content:center;border:2px solid #fff"
+            )}
+          >
+            {totalUnread > 99 ? "99+" : totalUnread}
+          </span>
+        ) : null}
       </div>
     );
   }
@@ -259,17 +299,28 @@ export function FloatingChat({
           ) : null}
           {threads.map((th) => {
             const on = th.id === activeId;
+            const n = unread[th.id] || 0;
             return (
               <div
                 key={th.id}
                 onClick={() => setActiveId(th.id)}
                 style={sx(
-                  "flex-shrink:0;font-size:11px;font-weight:700;padding:7px 11px;border-radius:10px;cursor:pointer;white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;" +
+                  "flex-shrink:0;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:7px 11px;border-radius:10px;cursor:pointer;white-space:nowrap;max-width:180px;" +
                     (on ? "background:#0E8FC9;color:#fff" : "background:#F0F6FA;color:#5A7488")
                 )}
                 title={threadLabel(th)}
               >
-                {threadLabel(th)}
+                <span style={sx("overflow:hidden;text-overflow:ellipsis")}>{threadLabel(th)}</span>
+                {n > 0 && !on ? (
+                  <span
+                    className="font-outfit"
+                    style={sx(
+                      "flex-shrink:0;background:#E5484D;color:#fff;font-size:9px;font-weight:800;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center"
+                    )}
+                  >
+                    {n > 99 ? "99+" : n}
+                  </span>
+                ) : null}
               </div>
             );
           })}
