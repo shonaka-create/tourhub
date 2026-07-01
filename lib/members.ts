@@ -17,11 +17,22 @@ export const EMPTY_PERMS: MemberPerms = {
 
 export type Role = "owner" | "staff";
 
+// 職種（本部 / ガイド / ドライバー）。権限(role/perms)とは独立。
+// 便グループの自動メンバー化やアサインの絞り込みに使う。
+export type Job = "ops" | "guide" | "driver";
+
+export const JOB_LABELS: Record<Job, string> = {
+  ops: "本部",
+  guide: "ガイド",
+  driver: "ドライバー",
+};
+
 // 組織に所属する 1 メンバー（profiles 1 行）
 export interface Member {
   userId: string;
   displayName: string;
   role: Role;
+  job: Job;
   perms: MemberPerms;
   active: boolean;
 }
@@ -31,6 +42,7 @@ export interface Invite {
   id: string;
   code: string;
   role: Role;
+  job: Job;
   perms: MemberPerms;
   email: string;
   expiresAt: string | null;
@@ -48,11 +60,16 @@ function toPerms(raw: unknown): MemberPerms {
   };
 }
 
+function toJob(raw: unknown): Job {
+  return raw === "guide" || raw === "driver" ? raw : "ops";
+}
+
 function memberFromRow(r: any): Member {
   return {
     userId: r.user_id,
     displayName: r.display_name ?? "",
     role: r.role === "owner" ? "owner" : "staff",
+    job: toJob(r.job),
     perms: toPerms(r.perms),
     active: r.active !== false,
   };
@@ -63,6 +80,7 @@ function inviteFromRow(r: any): Invite {
     id: r.id,
     code: r.code,
     role: r.role === "owner" ? "owner" : "staff",
+    job: toJob(r.job),
     perms: toPerms(r.perms),
     email: r.email ?? "",
     expiresAt: r.expires_at ?? null,
@@ -123,6 +141,19 @@ export async function updateMemberRole(
   if (error) throw error;
 }
 
+// メンバーの職種を更新（本部 / ガイド / ドライバー）
+export async function updateMemberJob(
+  userId: string,
+  job: Job
+): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ job })
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
 // メンバーの有効 / 無効を切り替え（退職者の凍結など）
 export async function setMemberActive(
   userId: string,
@@ -152,6 +183,7 @@ export async function fetchInvites(): Promise<Invite[]> {
 export async function createInvite(
   role: Role,
   perms: MemberPerms,
+  job: Job = "guide",
   email?: string,
   expiresInDays = 14
 ): Promise<Invite> {
@@ -165,6 +197,7 @@ export async function createInvite(
     .insert({
       role,
       perms,
+      job,
       email: email || null,
       invited_by: auth.user?.id ?? null,
       expires_at,

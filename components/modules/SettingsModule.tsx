@@ -9,16 +9,21 @@ import {
   MemberPerms,
   Invite,
   Role,
+  Job,
+  JOB_LABELS,
   EMPTY_PERMS,
   fetchMyProfile,
   fetchMembers,
   fetchInvites,
   updateMemberPerms,
   updateMemberRole,
+  updateMemberJob,
   setMemberActive,
   createInvite,
   deleteInvite,
 } from "@/lib/members";
+
+const JOBS: Job[] = ["ops", "guide", "driver"];
 
 const ROLE_LABELS: Record<keyof MemberPerms, string> = {
   booking: "予約編集",
@@ -128,6 +133,18 @@ export function SettingsModule() {
     }
   }
 
+  async function changeJob(m: Member, job: Job) {
+    if (!isOwner || job === m.job) return;
+    const prev = m.job;
+    setMembers((list) => list.map((x) => (x.userId === m.userId ? { ...x, job } : x)));
+    try {
+      await updateMemberJob(m.userId, job);
+    } catch {
+      setMembers((list) => list.map((x) => (x.userId === m.userId ? { ...x, job: prev } : x)));
+      setMembersError("職種の更新に失敗しました。");
+    }
+  }
+
   async function toggleActive(m: Member) {
     if (!isOwner || m.userId === me?.userId) return;
     const next = !m.active;
@@ -142,16 +159,19 @@ export function SettingsModule() {
 
   // ── 招待発行フォーム ──
   const [invRole, setInvRole] = useState<Role>("staff");
+  const [invJob, setInvJob] = useState<Job>("guide");
   const [invPerms, setInvPerms] = useState<MemberPerms>({ ...EMPTY_PERMS });
   const [inviting, setInviting] = useState(false);
 
   async function issueInvite() {
     setInviting(true);
     try {
-      const inv = await createInvite(invRole, invRole === "owner" ? EMPTY_PERMS : invPerms);
+      const job: Job = invRole === "owner" ? "ops" : invJob;
+      const inv = await createInvite(invRole, invRole === "owner" ? EMPTY_PERMS : invPerms, job);
       setInvites((prev) => [inv, ...prev]);
       setInvPerms({ ...EMPTY_PERMS });
       setInvRole("staff");
+      setInvJob("guide");
     } catch {
       setMembersError("招待の発行に失敗しました。");
     } finally {
@@ -302,11 +322,12 @@ export function SettingsModule() {
             <div className="r-twwrap">
               <div
                 style={sx(
-                  "display:grid;grid-template-columns:1.4fr 1fr repeat(4,.8fr) .8fr;gap:10px;padding:0 6px 10px;font-size:11px;font-weight:700;color:" + C.sub
+                  "display:grid;grid-template-columns:1.4fr 1fr 1fr repeat(4,.8fr) .8fr;gap:10px;padding:0 6px 10px;font-size:11px;font-weight:700;color:" + C.sub
                 )}
               >
                 <div>ユーザー</div>
                 <div>ロール</div>
+                <div>職種</div>
                 {Object.values(ROLE_LABELS).map((l) => (
                   <div key={l} style={sx("text-align:center")}>{l}</div>
                 ))}
@@ -320,7 +341,7 @@ export function SettingsModule() {
                   <div
                     key={m.userId}
                     style={sx(
-                      "display:grid;grid-template-columns:1.4fr 1fr repeat(4,.8fr) .8fr;gap:10px;align-items:center;padding:11px 6px;border-bottom:1px solid #F0F5F8"
+                      "display:grid;grid-template-columns:1.4fr 1fr 1fr repeat(4,.8fr) .8fr;gap:10px;align-items:center;padding:11px 6px;border-bottom:1px solid #F0F5F8"
                     )}
                   >
                     <div style={sx("font-weight:700;font-size:13px")}>
@@ -341,6 +362,23 @@ export function SettingsModule() {
                       >
                         {m.role === "owner" ? "オーナー" : "スタッフ"}
                       </span>
+                    </div>
+                    <div>
+                      {isOwner ? (
+                        <select
+                          value={m.job}
+                          onChange={(e) => changeJob(m, e.target.value as Job)}
+                          style={sx(
+                            "border:1px solid " + C.line + ";border-radius:8px;padding:5px 8px;font-family:inherit;font-size:12px;font-weight:700;color:" + C.ink + ";outline:none;background:#fff;cursor:pointer"
+                          )}
+                        >
+                          {JOBS.map((j) => (
+                            <option key={j} value={j}>{JOB_LABELS[j]}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span style={sx("font-size:12px;font-weight:700;color:" + C.sub)}>{JOB_LABELS[m.job]}</span>
+                      )}
                     </div>
                     {PERM_KEYS.map((k) => (
                       <div key={k} style={sx("text-align:center")}>
@@ -401,6 +439,20 @@ export function SettingsModule() {
             </div>
             {invRole === "staff" && (
               <div>
+                <div style={sx(label + "margin-bottom:6px")}>職種</div>
+                <select
+                  value={invJob}
+                  onChange={(e) => setInvJob(e.target.value as Job)}
+                  style={sx("border:1px solid " + C.line + ";border-radius:10px;padding:9px 12px;font-family:inherit;font-size:13px;font-weight:700;color:" + C.ink + ";outline:none")}
+                >
+                  <option value="guide">ガイド</option>
+                  <option value="driver">ドライバー</option>
+                  <option value="ops">本部</option>
+                </select>
+              </div>
+            )}
+            {invRole === "staff" && (
+              <div>
                 <div style={sx(label + "margin-bottom:6px")}>付与する権限</div>
                 <div style={sx("display:flex;gap:14px;flex-wrap:wrap")}>
                   {PERM_KEYS.map((k) => (
@@ -438,6 +490,9 @@ export function SettingsModule() {
                     <code style={sx("font-family:monospace;font-size:14px;font-weight:800;letter-spacing:1px;color:" + C.ink)}>{inv.code}</code>
                     <span style={sx("font-size:11px;font-weight:700;color:" + (inv.role === "owner" ? "#92400E" : C.deep))}>
                       {inv.role === "owner" ? "オーナー" : "スタッフ"}
+                    </span>
+                    <span style={sx("font-size:11px;font-weight:700;color:" + C.sub)}>
+                      {JOB_LABELS[inv.job]}
                     </span>
                     <span style={sx("font-size:11px;color:" + C.sub)}>
                       {used ? "使用済み" : expired ? "期限切れ" : "有効"}

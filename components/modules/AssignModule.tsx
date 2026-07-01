@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sx } from "@/lib/sx";
 import { C, card, h2, label, pill } from "@/lib/theme";
 import { Html } from "../Html";
+import { fetchMembers, JOB_LABELS } from "@/lib/members";
 
 type Cat = "guide" | "van" | "equip";
 
@@ -68,6 +69,30 @@ export function AssignModule() {
   const [hover, setHover] = useState<string | null>(null);
   const [addCat, setAddCat] = useState<Cat | null>(null);
   const [addForm, setAddForm] = useState({ name: "", sub: "" });
+  // スタッフ（人）プールを実データ（profiles）から取得できたか
+  const [staffLinked, setStaffLinked] = useState(false);
+
+  // 組織の実スタッフ（ガイド/ドライバー）を「スタッフ（人）」プールに反映。
+  // これにより割当が実ユーザー(user_id)を参照し、便グループの自動招集につながる。
+  useEffect(() => {
+    let active = true;
+    fetchMembers()
+      .then((members) => {
+        const field = members.filter((m) => m.active && (m.job === "guide" || m.job === "driver"));
+        if (!active || field.length === 0) return; // 未ログイン/スタッフ未登録時はデモのまま
+        setPools((p) => ({
+          ...p,
+          guide: field.map((m) => ({ id: m.userId, name: m.displayName || "（無名）", sub: JOB_LABELS[m.job] })),
+        }));
+        setStaffLinked(true);
+      })
+      .catch(() => {
+        /* 未ログイン等はデモのプールを使用 */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // ドラッグ＆ドロップ・ドロップダウン選択 共通の割当処理
   function assign(tid: string, cat: Cat, id: string) {
@@ -212,7 +237,14 @@ export function AssignModule() {
     <div className="r-split" style={sx("display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start")}>
       {/* POOL */}
       <section style={sx(card + "padding:16px 16px 18px;display:flex;flex-direction:column;gap:18px")}>
-        <div style={sx(label)}>ツアーへドラッグ、または各ツアーのメニューから選択して割当 ・ ＋で項目を追加</div>
+        <div style={sx(label)}>
+          ツアーへドラッグ、または各ツアーのメニューから選択して割当 ・ ＋で項目を追加
+        </div>
+        {staffLinked ? (
+          <div style={sx("font-size:11px;color:" + C.green + ";font-weight:700;margin-top:2px")}>
+            スタッフ（人）は組織メンバーと連携済み（設定＞メンバーで職種を管理）
+          </div>
+        ) : null}
         {poolSection("guide")}
         {poolSection("van")}
         {poolSection("equip")}
